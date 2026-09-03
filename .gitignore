@@ -1,0 +1,19 @@
+# 运行时产物
+data/
+config.toml
+
+# 构建产物
+build/
+dist/
+*.zip
+
+# 验证产物
+ab_out/
+
+# 第三方二进制（可选后端，README 说明如何自行放置）
+AssetStudioModCLI/
+
+# Python
+__pycache__/
+*.pyc
+python/

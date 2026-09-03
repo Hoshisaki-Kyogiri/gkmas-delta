@@ -1,0 +1,9 @@
+# Batch files are parsed by cmd.exe, which requires CRLF. Checking one out with
+# LF endings makes it fail with "'e' is not recognized as an internal command".
+*.bat text eol=crlf
+*.txt text eol=crlf
+
+*.py  text eol=lf
+*.md  text eol=lf
+*.toml text eol=lf
+*.proto text eol=lf
