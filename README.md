@@ -18,7 +18,24 @@
 
 ## 快速开始
 
-双击 `启动.bat`。
+### 绿色包（推荐给不折腾的人）
+
+下载 `umegkmas-green-win64.zip`（28 MB），解压，双击 `启动.bat`。
+
+**不需要装 Python，不需要装 .NET，不需要 pip。** 解压后 69 MB，自带 Python 3.13 和全部依赖。
+
+### 从源码运行
+
+```bash
+pip install -r requirements.txt
+python -m umegkmas
+```
+
+需要 Python 3.11 以上（用到标准库 `tomllib`）。
+
+---
+
+双击 `启动.bat`（等价于 `umegkmas.bat`，后者是 ASCII 名的真正入口）。
 
 第一次运行会问你：
 
@@ -62,8 +79,10 @@
 
 两个可选：
 
-- `"assetstudio"`（默认）— 调用 `AssetStudioModCLI.exe`，需要机器上装有 **.NET 9 运行时**。
-- `"unitypy"` — 纯 Python，`pip install UnityPy` 即可，不需要 .NET，跨平台。
+- `"unitypy"`（默认）— 纯 Python，不需要 .NET，跨平台，绿色包里已内置。
+- `"assetstudio"` — 调用 `AssetStudioModCLI.exe`，需要机器上装有 **.NET 9 运行时**。仓库里不含这个程序，需要自己下载后放到程序目录下的 `AssetStudioModCLI/` 里，或在 config.toml 用 `assetstudio_path` 指定。
+
+选 UnityPy 作默认不是因为它快 —— 实测两者基本打平（185 个资源包：AssetStudio 14~18 秒，UnityPy 12 线程 13 秒，单线程 65 秒），而且 UnityPy 依赖链 22.7 MB 比 AssetStudio 的 15.7 MB 还大 7 MB。选它是因为它**不需要 .NET 9 运行时**，这是绿色包能做到"解压双击即用"的前提。
 
 两者在 v46 增量的 185 个资源包上做过实测比对（`tools/ab_extract.py`）：
 
@@ -88,8 +107,10 @@ umegkmas/
 ├─ 启动.bat                双击这个
 ├─ config.toml             配置，首次运行生成
 ├─ umegkmas/               程序本体
+├─ umegkmas.bat            真正的入口（ASCII 名）
 ├─ tools/ab_extract.py     抽图后端 A/B 比对工具
-├─ AssetStudioModCLI/      抽图程序（backend = "unitypy" 时不需要）
+├─ tools/build_green.py    绿色包构建脚本
+├─ python/                 内置解释器（仅绿色包有）
 └─ data/                   所有产物
    ├─ state.json           本地版本记录
    ├─ manifests/           清单（全量 / 各次增量）
@@ -100,16 +121,15 @@ umegkmas/
       └─ Converted/        转换后的 webp
 ```
 
-## 依赖
+## 自己构建绿色包
 
 ```bash
-pip install -r requirements.txt
+python tools/build_green.py
 ```
 
-`requests` / `pycryptodome` / `rich` / `protobuf` / `pillow`。
-用 UnityPy 后端时额外 `pip install UnityPy`。
+从 python.org 拉嵌入式 Python，把依赖以 **wheel 形式**装进去（嵌入式发行版没有 setuptools，任何回退到源码编译的包都会失败，所以脚本强制 `--only-binary=:all:`），验证全部模块可加载，剥掉 pip/setuptools，最后打成 zip。
 
-需要 Python 3.11 以上（用到标准库 `tomllib`）。
+产出 `build/umegkmas-green-win64.zip`。
 
 ## 已知行为
 
