@@ -30,8 +30,8 @@ def _prompt_first_run() -> str:
     print()
     print("  这是第一次运行，还没有本地记录。请选择：")
     print()
-    print("    [1] 只记录当前版本，从下次更新开始增量下载  （推荐，几乎不占空间）")
-    print("    [2] 下载整个游戏资源                        （15 GB 以上，很慢）")
+    print("    [1] 下载最新一个版本的更新内容  （推荐，通常几十到几百 MB）")
+    print("    [2] 下载整个游戏资源            （60 GB 以上，很慢）")
     print("    [3] 退出")
     print()
     while True:
@@ -54,7 +54,7 @@ def resolve_mode(config, state: State, requested: str | None) -> str:
         choice = config.first_run
         if choice == "ask":
             choice = _prompt_first_run()
-        return {"latest": "baseline", "full": "full", "quit": "quit"}.get(choice, "baseline")
+        return choice if choice in {"latest", "full", "baseline", "quit"} else "latest"
 
     if not state.matches_app_version(config.app_version):
         # Revision numbers are scoped to the app version in the octo URL, so an
@@ -68,6 +68,21 @@ def resolve_mode(config, state: State, requested: str | None) -> str:
     return "update"
 
 
+def _base_revision(config, state: State, mode: str) -> int:
+    """Which revision to diff against. 0 means "give me the whole catalogue"."""
+    if mode == "update":
+        return state.last_revision
+
+    if mode == "latest":
+        # First run, no local history: ask what the newest revision is (a 54-byte
+        # probe) and take just that one revision's changes.
+        newest = octo.latest_revision(config.app_version, config.unity_version)
+        info(f"服务器最新版本 v{newest}。")
+        return max(newest - 1, 0)
+
+    return 0
+
+
 def fetch_manifest(config, state: State, mode: str, local_cache=None):
     """Returns (manifest dict, raw proto bytes, base revision or None)."""
     if local_cache is not None:
@@ -75,8 +90,8 @@ def fetch_manifest(config, state: State, mode: str, local_cache=None):
         database, proto_bytes = octo.decrypt_local_cache(local_cache)
         return octo.to_dict(database), proto_bytes, None
 
-    base = state.last_revision if mode == "update" else 0
-    if mode == "update":
+    base = _base_revision(config, state, mode)
+    if base:
         info(f"向服务器索取 v{base} 之后的更新...")
     else:
         info("获取完整清单（约 5 MB）...")
@@ -106,13 +121,13 @@ def run(config, requested_mode: str | None = None, local_cache=None, force: bool
         info("以后每次运行都只会下载新增和变动的内容。")
         return 0
 
-    if mode == "update":
-        if revision == state.last_revision and not force:
-            ok(f"已经是最新版本 v{revision}，没有更新。")
-            return 0
-        label = f"diff_v{base}_v{revision}"
-    else:
-        label = f"v{revision}"
+    if mode == "update" and revision == state.last_revision and not force:
+        ok(f"已经是最新版本 v{revision}，没有更新。")
+        return 0
+
+    # `base` is set for every incremental fetch, whether it came from local state
+    # (update) or from the newest-revision probe (latest).
+    label = f"diff_v{base}_v{revision}" if base else f"v{revision}"
 
     manifest, deleted = octo.drop_deleted(manifest)
     if deleted:
@@ -125,7 +140,7 @@ def run(config, requested_mode: str | None = None, local_cache=None, force: bool
         return 0
 
     manifest_path = octo.save_manifest(manifest, proto_bytes, paths.manifests, revision, label)
-    if mode == "update":
+    if base:
         ok(f"v{base} → v{revision}：{_summarise(manifest)}，共 {human_size(octo.total_bytes(manifest))}")
     else:
         ok(f"完整清单 v{revision}：{_summarise(manifest)}，共 {human_size(octo.total_bytes(manifest))}")

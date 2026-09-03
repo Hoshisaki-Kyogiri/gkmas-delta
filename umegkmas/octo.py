@@ -97,6 +97,17 @@ def fetch(revision: int, app_version: str, unity_version: str) -> tuple[octodb_p
     return database, proto_bytes
 
 
+# Any revision past the newest one comes back as an empty manifest stamped with
+# the current revision - 54 bytes, so it is the cheap way to ask "what's latest?"
+# without pulling the ~5 MB full catalogue.
+PROBE_REVISION = 9999999
+
+
+def latest_revision(app_version: str, unity_version: str) -> int:
+    database, _ = fetch(PROBE_REVISION, app_version, unity_version)
+    return database.revision
+
+
 def decrypt_local_cache(cache_path: Path) -> tuple[octodb_pb2.Database, bytes]:
     """Decrypt an octocacheevai copied off a device. Always a full manifest."""
     if not cache_path.exists():

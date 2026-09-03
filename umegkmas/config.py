@@ -20,9 +20,10 @@ data_dir = ""
 
 [update]
 # 首次运行且没有历史记录时怎么办：
-#   "ask"    每次问我（默认）
-#   "latest" 只记下当前版本号，从下次更新开始增量下载（推荐，几乎不占空间）
-#   "full"   下载整个游戏资源（15 GB 以上，很慢）
+#   "ask"      问我（默认）
+#   "latest"   下载最新一个版本的更新内容（通常几十到几百 MB）
+#   "full"     下载整个游戏资源（60 GB 以上，很慢）
+#   "baseline" 只记下当前版本号，什么都不下，从下次更新开始
 first_run = "ask"
 
 [download]
@@ -103,10 +104,10 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
     data_dir = Path(data_dir_text).expanduser() if data_dir_text else APP_DIR / "data"
 
     first_run = str(update.get("first_run", "ask")).lower()
-    if first_run not in {"ask", "latest", "full"}:
+    if first_run not in {"ask", "latest", "full", "baseline"}:
         raise ConfigError(
             f"config.toml 里 first_run = \"{first_run}\" 不是有效值。",
-            '只能填 "ask"、"latest" 或 "full"。',
+            '只能填 "ask"、"latest"、"full" 或 "baseline"。',
         )
 
     backend = str(extract.get("backend", "unitypy")).lower()

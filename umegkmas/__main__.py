@@ -22,7 +22,8 @@ def build_parser() -> argparse.ArgumentParser:
         description="学园偶像大师 资源更新工具。不加任何参数就是「检查并下载更新」。",
     )
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--full", action="store_true", help="下载完整资源（15 GB 以上）")
+    mode.add_argument("--full", action="store_true", help="下载完整资源（60 GB 以上）")
+    mode.add_argument("--latest", action="store_true", help="下载最新一个版本的更新内容")
     mode.add_argument("--baseline", action="store_true", help="只记录当前版本号，不下载")
     mode.add_argument("--status", action="store_true", help="显示本地记录的版本和服务器最新版本")
 
@@ -47,14 +48,16 @@ def show_status(config) -> int:
     console.print(f"  数据目录：{config.paths.data_dir}")
 
     try:
-        database, _ = octo.fetch(0, config.app_version, config.unity_version)
+        # A probe past the newest revision answers this in 54 bytes; pulling the
+        # full catalogue just to read one number would cost ~5 MB.
+        newest = octo.latest_revision(config.app_version, config.unity_version)
     except UmeError as exc:
         warn(exc.message)
         return 1
 
-    console.print(f"  服务器版本：[bold]v{database.revision}[/bold]")
+    console.print(f"  服务器版本：[bold]v{newest}[/bold]")
     if state.has_baseline and state.matches_app_version(config.app_version):
-        if database.revision > state.last_revision:
+        if newest > state.last_revision:
             diff, _ = octo.fetch(state.last_revision, config.app_version, config.unity_version)
             manifest = octo.to_dict(diff)
             console.print(
@@ -84,6 +87,8 @@ def main(argv=None) -> int:
         mode = None
         if args.full:
             mode = "full"
+        elif args.latest:
+            mode = "latest"
         elif args.baseline:
             mode = "baseline"
 
