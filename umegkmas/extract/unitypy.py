@@ -13,10 +13,10 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn, TimeRemainingColumn
+from rich.progress import BarColumn, SpinnerColumn, TaskProgressColumn, TextColumn, TimeRemainingColumn
 
 from ..errors import BackendMissingError
-from ..ui import console, info, warn
+from ..ui import Cancelled, Progress, console, detail, info, warn
 
 # Windows reserved characters plus the ones a container path legitimately uses.
 _UNSAFE = '<>:"|?*\\/'
@@ -119,7 +119,8 @@ def extract(input_dir: Path, output_dir: Path, unity_version: str, workers: int 
         console=console,
     ) as progress:
         task_id = progress.add_task("[cyan]抽取贴图...", total=len(bundles))
-        with ThreadPoolExecutor(max_workers=workers) as executor:
+        executor = ThreadPoolExecutor(max_workers=workers)
+        try:
             futures = {
                 executor.submit(_extract_bundle, bundle, output_dir, unity_version): bundle
                 for bundle in bundles
@@ -130,10 +131,14 @@ def extract(input_dir: Path, output_dir: Path, unity_version: str, workers: int 
                 if error:
                     failures.append(error)
                 progress.update(task_id, advance=1)
+        except Cancelled:
+            executor.shutdown(wait=True, cancel_futures=True)
+            raise
+        executor.shutdown(wait=True)
 
     if failures:
         warn(f"{len(failures)} 个资源包抽取失败，例如：")
         for line in failures[:5]:
-            console.print(f"    [red]{line}[/red]")
+            detail(line)
     info(f"共抽出 {total_images} 张图片。")
     return total_images > 0

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from .ui import console, info, warn
+from .ui import Cancelled, check_cancel, detail, emit, info, warn
 
 ALLOWED_SIZES = {
     (1024, 2048): (1152, 2048),
@@ -59,9 +59,11 @@ def convert(input_dir: Path, output_dir: Path, workers: int | None = None) -> tu
 
     # libwebp releases the GIL while encoding, so threads scale near-linearly
     # without a process pool's spawn cost.
-    with ThreadPoolExecutor(max_workers=workers) as executor:
+    executor = ThreadPoolExecutor(max_workers=workers)
+    try:
         futures = {executor.submit(_convert_one, path, input_dir, output_dir): path for path in files}
         for future in as_completed(futures):
+            check_cancel()
             result = future.result()
             with lock:
                 done += 1
@@ -72,7 +74,13 @@ def convert(input_dir: Path, output_dir: Path, workers: int | None = None) -> tu
             else:
                 failed += 1
                 if failed <= 5:
-                    console.print(f"    [red]{futures[future].name} {result}[/red]")
+                    detail(f"{futures[future].name} {result}")
+            if done % 50 == 0 or done == len(files):
+                emit("progress", text="转换 webp", completed=done, total=len(files), unit="count")
+    except Cancelled:
+        executor.shutdown(wait=True, cancel_futures=True)
+        raise
+    executor.shutdown(wait=True)
 
     info(f"转换完成：{processed} 张，跳过 {skipped} 张" + (f"，失败 {failed} 张" if failed else "。"))
     return processed, skipped

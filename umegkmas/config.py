@@ -1,5 +1,7 @@
 """config.toml loading, with a commented default written on first run."""
 
+import json
+import re
 import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -137,3 +139,108 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         app_version=str(advanced.get("app_version", "205100")),
         unity_version=str(advanced.get("unity_version", "6000.0.67f1")),
     )
+
+
+# Settings the web console may edit: (section, key) -> Python type. Anything not
+# listed stays hand-edit only.
+EDITABLE_FIELDS = {
+    ("paths", "data_dir"): str,
+    ("update", "first_run"): str,
+    ("download", "assets"): bool,
+    ("download", "resources"): bool,
+    ("download", "workers"): int,
+    ("download", "verify_md5"): bool,
+    ("process", "deobfuscate"): bool,
+    ("process", "extract_images"): bool,
+    ("process", "convert_webp"): bool,
+    ("process", "keep_base_copy"): bool,
+    ("extract", "backend"): str,
+    ("extract", "assetstudio_path"): str,
+    ("advanced", "app_version"): str,
+    ("advanced", "unity_version"): str,
+}
+
+
+def read_raw(path: Path = CONFIG_PATH) -> dict:
+    """The editable settings as written in the file, defaults filled in."""
+    defaults = tomllib.loads(DEFAULT_CONFIG_TEXT)
+    try:
+        current = tomllib.loads(path.read_text(encoding="utf-8"))
+    except (OSError, tomllib.TOMLDecodeError):
+        current = {}
+    values = {}
+    for section, key in EDITABLE_FIELDS:
+        values.setdefault(section, {})[key] = current.get(section, {}).get(key, defaults[section][key])
+    return values
+
+
+def _toml_value(value) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, int):
+        return str(value)
+    # A JSON string is a valid TOML basic string for anything we store here.
+    return json.dumps(str(value), ensure_ascii=False)
+
+
+_ASSIGNMENT = re.compile(r'^(\s*(?P<key>[A-Za-z0-9_]+)\s*=\s*)("(?:[^"\\]|\\.)*"|[^\s#]+)(.*)$')
+_SECTION = re.compile(r"^\s*\[(?P<name>[^\]]+)\]\s*(#.*)?$")
+
+
+def save_values(updates: dict, path: Path = CONFIG_PATH) -> Config:
+    """Write {section: {key: value}} into config.toml, keeping every comment.
+
+    Only the value token on each matching line is replaced, so the user's own
+    notes and layout survive. The result is validated before it replaces the
+    file; an invalid edit raises ConfigError and leaves the file untouched.
+    """
+    pending = {}
+    for section, keys in updates.items():
+        for key, value in keys.items():
+            kind = EDITABLE_FIELDS.get((section, key))
+            if kind is None:
+                raise ConfigError(f"不能修改的配置项：[{section}] {key}")
+            try:
+                pending[(section, key)] = kind(value) if kind is not bool else bool(value)
+            except (TypeError, ValueError) as exc:
+                raise ConfigError(f"[{section}] {key} 的值无效：{value!r}") from exc
+
+    ensure_config_file(path)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    section = None
+    for index, line in enumerate(lines):
+        header = _SECTION.match(line)
+        if header:
+            section = header.group("name").strip()
+            continue
+        match = _ASSIGNMENT.match(line)
+        if match and (section, match.group("key")) in pending:
+            value = pending.pop((section, match.group("key")))
+            lines[index] = f"{match.group(1)}{_toml_value(value)}{match.group(4)}"
+
+    # Keys missing from a hand-trimmed file go at the end of their section.
+    for (section, key), value in pending.items():
+        header_index = next(
+            (i for i, line in enumerate(lines) if (m := _SECTION.match(line)) and m.group("name").strip() == section),
+            None,
+        )
+        if header_index is None:
+            lines += ["", f"[{section}]", f"{key} = {_toml_value(value)}"]
+            continue
+        insert_at = header_index + 1
+        while insert_at < len(lines) and not _SECTION.match(lines[insert_at]):
+            insert_at += 1
+        while insert_at > header_index + 1 and not lines[insert_at - 1].strip():
+            insert_at -= 1
+        lines.insert(insert_at, f"{key} = {_toml_value(value)}")
+
+    text = "\n".join(lines) + "\n"
+    tmp = path.with_suffix(".toml.tmp")
+    tmp.write_text(text, encoding="utf-8", newline="\n")
+    try:
+        config = load_config(tmp)
+    except ConfigError:
+        tmp.unlink(missing_ok=True)
+        raise
+    tmp.replace(path)
+    return config

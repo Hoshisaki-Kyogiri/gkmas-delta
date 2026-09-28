@@ -16,7 +16,7 @@ from . import convert, deobfuscate, extract, octo
 from .downloader import build_jobs, check_disk_space, download
 from .errors import UmeError
 from .state import State
-from .ui import human_size, info, ok, step, warn
+from .ui import check_cancel, human_size, info, ok, step, warn
 
 
 def _summarise(manifest: dict) -> str:
@@ -45,7 +45,7 @@ def _prompt_first_run() -> str:
         print("  只能输入 1、2 或 3。")
 
 
-def resolve_mode(config, state: State, requested: str | None) -> str:
+def resolve_mode(config, state: State, requested: str | None, interactive: bool = True) -> str:
     """Decide between baseline / full / update."""
     if requested:
         return requested
@@ -53,6 +53,8 @@ def resolve_mode(config, state: State, requested: str | None) -> str:
     if not state.has_baseline:
         choice = config.first_run
         if choice == "ask":
+            if not interactive:
+                raise UmeError("还没有本地记录，需要先选择首次下载方式。", "在控制台里选一种首次运行方式。")
             choice = _prompt_first_run()
         return choice if choice in {"latest", "full", "baseline", "quit"} else "latest"
 
@@ -100,12 +102,14 @@ def fetch_manifest(config, state: State, mode: str, local_cache=None):
     return octo.to_dict(database), proto_bytes, (base or None)
 
 
-def run(config, requested_mode: str | None = None, local_cache=None, force: bool = False) -> int:
+def run(
+    config, requested_mode: str | None = None, local_cache=None, force: bool = False, interactive: bool = True
+) -> int:
     paths = config.paths
     paths.ensure()
     state = State.load(paths.state_file)
 
-    mode = "full" if local_cache is not None else resolve_mode(config, state, requested_mode)
+    mode = "full" if local_cache is not None else resolve_mode(config, state, requested_mode, interactive)
     if mode == "quit":
         info("已取消。")
         return 0
@@ -154,11 +158,13 @@ def run(config, requested_mode: str | None = None, local_cache=None, force: bool
         info(f"{skipped} 个文件本地已是最新，跳过。")
     check_disk_space(jobs, paths.data_dir)
     _, failed = download(jobs, config.workers)
+    check_cancel()
 
     if config.deobfuscate:
         step("解混淆")
         deobfuscate.deobfuscate_assets(manifest, paths, config.keep_base_copy)
 
+    check_cancel()
     extracted = False
     if config.extract_images and manifest["assetBundleList"]:
         step("抽取贴图")
@@ -178,6 +184,7 @@ def run(config, requested_mode: str | None = None, local_cache=None, force: bool
             if exc.hint:
                 warn(exc.hint)
 
+    check_cancel()
     if config.convert_webp and extracted:
         step("转换 webp")
         convert.convert(paths.revision_images(revision), paths.revision_converted(revision), config.workers)
