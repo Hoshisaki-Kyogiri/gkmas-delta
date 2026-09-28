@@ -13,14 +13,13 @@ from pathlib import Path
 
 from rich.progress import (
     BarColumn,
-    Progress,
     SpinnerColumn,
     TaskProgressColumn,
     TextColumn,
     TimeRemainingColumn,
 )
 
-from .ui import console, info, warn
+from .ui import Cancelled, Progress, console, info, warn
 
 PROCESS_POOL_THRESHOLD = 32
 COPY_BUFFER_SIZE = 1024 * 1024
@@ -160,12 +159,17 @@ def _run(tasks, worker, description: str) -> int:
                     errors += 1
                 progress.update(task_id, advance=1)
         else:
-            with ProcessPoolExecutor() as executor:
+            executor = ProcessPoolExecutor()
+            try:
                 futures = [executor.submit(worker, task) for task in tasks]
                 for future in as_completed(futures):
                     if not future.result():
                         errors += 1
                     progress.update(task_id, advance=1)
+            except Cancelled:
+                executor.shutdown(wait=True, cancel_futures=True)
+                raise
+            executor.shutdown(wait=True)
     return errors
 
 

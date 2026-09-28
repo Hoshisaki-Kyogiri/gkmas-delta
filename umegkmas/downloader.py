@@ -22,7 +22,6 @@ import requests
 from rich.progress import (
     BarColumn,
     DownloadColumn,
-    Progress,
     TaskProgressColumn,
     TextColumn,
     TimeRemainingColumn,
@@ -30,7 +29,7 @@ from rich.progress import (
 )
 
 from .errors import DiskSpaceError
-from .ui import console, human_size, info, warn
+from .ui import Cancelled, Progress, check_cancel, console, detail, human_size, info, warn
 
 CHUNK_SIZE = 256 * 1024
 REQUEST_TIMEOUT = (10, 60)
@@ -157,6 +156,7 @@ def _download_ranged(url, temp_path, size, task_id, overall_id, progress):
 
 
 def _download_one(job, progress, overall_id, state, lock):
+    check_cancel()
     label = "资源包" if job["is_asset"] else "文件"
     size = _parse_size(job["size"])
     task_id = progress.add_task(f"[cyan]{label} {job['name']}", total=size, start=False)
@@ -178,6 +178,11 @@ def _download_one(job, progress, overall_id, state, lock):
             )
         progress.remove_task(task_id)
         return True
+    except Cancelled:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        progress.remove_task(task_id)
+        raise
     except Exception as exc:
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -277,22 +282,29 @@ def download(jobs, workers: int):
         TimeRemainingColumn(),
         console=console,
         refresh_per_second=10,
+        unit="bytes",
     ) as progress:
         overall_id = progress.add_task(
             f"[magenta]总进度 (0/{len(jobs)} 个文件)", total=total or None
         )
-        with ThreadPoolExecutor(max_workers=workers) as executor:
+        executor = ThreadPoolExecutor(max_workers=workers)
+        try:
             futures = [
                 executor.submit(_download_one, job, progress, overall_id, state, lock)
                 for job in jobs
             ]
             for future in as_completed(futures):
                 future.result()
+        except Cancelled:
+            # Queued jobs would each open a connection before noticing; drop them.
+            executor.shutdown(wait=True, cancel_futures=True)
+            raise
+        executor.shutdown(wait=True)
 
     if state["failed"]:
         warn(f"{len(state['failed'])} 个文件下载失败：")
         for name, reason in state["failed"][:10]:
-            console.print(f"    [red]{name}[/red] — {reason}")
+            detail(f"{name} — {reason}")
         if len(state["failed"]) > 10:
-            console.print(f"    ... 另有 {len(state['failed']) - 10} 个")
+            detail(f"... 另有 {len(state['failed']) - 10} 个")
     return state["done"], state["failed"]
