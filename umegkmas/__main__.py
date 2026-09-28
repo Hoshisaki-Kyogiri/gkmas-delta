@@ -59,7 +59,7 @@ def show_status(config) -> int:
     pending = remote["pending"]
     if pending:
         console.print(
-            f"  待更新：[bold green]{pending['bundles']} 个资源包 / {pending['files']} 个文件，"
+            f"  待更新：[bold green]{pending['bundles']} 个 Asset / {pending['files']} 个 Resource，"
             f"共 {human_size(pending['bytes'])}[/bold green]"
         )
     elif local["has_baseline"] and not local["app_version_changed"]:

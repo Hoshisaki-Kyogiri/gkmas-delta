@@ -185,7 +185,7 @@ def deobfuscate_assets(manifest: dict, paths, keep_base_copy: bool = False) -> i
     entries = manifest.get("assetBundleList", [])
     revision = manifest["revision"]
     if not entries:
-        info("本次没有需要解混淆的资源包。")
+        info("本次没有需要解混淆的 Asset。")
         return 0
     if not paths.assets.exists():
         warn(f"找不到目录 {paths.assets}，跳过解混淆。")
@@ -193,10 +193,10 @@ def deobfuscate_assets(manifest: dict, paths, keep_base_copy: bool = False) -> i
 
     tasks = _build_tasks(entries, paths.assets, _out_dirs(paths, revision, keep_base_copy), "md5")
     if not tasks:
-        warn("没有找到可解混淆的资源包文件。")
+        warn("没有找到可解混淆的 Asset 文件。")
         return 0
 
-    errors = _run(tasks, _worker, f"[cyan]解混淆资源包 (v{revision})...")
+    errors = _run(tasks, _worker, f"[cyan]解混淆 Asset (v{revision})...")
     if errors:
         warn(f"解混淆完成，{errors} 个文件失败。")
     else:
@@ -214,7 +214,7 @@ def rename_resources(manifest: dict, paths, keep_base_copy: bool = False) -> int
     tasks = _build_tasks(entries, paths.resources, _out_dirs(paths, revision, keep_base_copy), "name")
     if not tasks:
         return 0
-    errors = _run(tasks, _copy_worker, f"[magenta]整理资源文件 (v{revision})...")
+    errors = _run(tasks, _copy_worker, f"[magenta]整理 Resource (v{revision})...")
     if errors:
         warn(f"整理完成，{errors} 个文件失败。")
     return len(tasks) - errors

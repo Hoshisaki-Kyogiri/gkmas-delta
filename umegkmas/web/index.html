@@ -223,7 +223,6 @@ dialog.viewer::backdrop { background: rgba(0,0,0,.82); }
 .group { display: grid; grid-template-columns: 180px 1fr; gap: 18px; padding: 18px; border-bottom: 1px solid var(--line); }
 .group:last-child { border-bottom: 0; }
 .group h3 { margin: 0; font-size: 14px; }
-.group h3 small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; margin-top: 4px; }
 .fields { display: grid; gap: 14px; }
 .field { display: grid; gap: 4px; }
 .field > span { font-weight: 500; }
@@ -399,7 +398,7 @@ dialog.confirm .actions { justify-content: flex-end; }
   <section id="tab-settings" hidden>
     <form class="card" id="cfg" autocomplete="off">
       <div class="group">
-        <h3>存储<small>数据放在哪</small></h3>
+        <h3>存储</h3>
         <div class="fields">
           <label class="field"><span>数据目录</span>
             <input type="text" class="mono" data-key="paths.data_dir" placeholder="留空 = 程序目录下的 data 文件夹">
@@ -408,10 +407,10 @@ dialog.confirm .actions { justify-content: flex-end; }
         </div>
       </div>
       <div class="group">
-        <h3>下载<small>下什么、多快</small></h3>
+        <h3>下载</h3>
         <div class="fields">
-          <label class="check"><input type="checkbox" data-key="download.assets"><span>下载资源包</span><small>图片 / 模型 / 特效等 assetbundle</small></label>
-          <label class="check"><input type="checkbox" data-key="download.resources"><span>下载资源文件</span><small>音频 / 文本等</small></label>
+          <label class="check"><input type="checkbox" data-key="download.assets"><span>下载 Asset</span><small>图片 / 模型 / 特效等 assetbundle</small></label>
+          <label class="check"><input type="checkbox" data-key="download.resources"><span>下载 Resource</span><small>音频 / 文本等</small></label>
           <label class="check"><input type="checkbox" data-key="download.verify_md5"><span>校验已有文件的 md5</span><small>关掉会快一点，但同名更新的文件可能被漏掉</small></label>
           <label class="field"><span>同时下载连接数</span>
             <input type="number" min="1" max="64" data-key="download.workers" style="max-width:120px">
@@ -420,9 +419,9 @@ dialog.confirm .actions { justify-content: flex-end; }
         </div>
       </div>
       <div class="group">
-        <h3>处理<small>下载后做什么</small></h3>
+        <h3>处理</h3>
         <div class="fields">
-          <label class="check"><input type="checkbox" data-key="process.deobfuscate"><span>解混淆资源包</span><small>抽图的前提，一般不要关</small></label>
+          <label class="check"><input type="checkbox" data-key="process.deobfuscate"><span>解混淆 Asset</span><small>抽图的前提，一般不要关</small></label>
           <label class="check"><input type="checkbox" data-key="process.extract_images"><span>抽取贴图为 PNG</span></label>
           <label class="check"><input type="checkbox" data-key="process.convert_webp"><span>转换 WebP</span><small>把被压扁的立绘恢复比例后另存为 webp</small></label>
           <label class="check"><input type="checkbox" data-key="process.keep_base_copy"><span>额外保存跨版本汇总副本</span><small>会让磁盘占用翻倍，一般不需要</small></label>
@@ -438,7 +437,7 @@ dialog.confirm .actions { justify-content: flex-end; }
         </div>
       </div>
       <div class="group">
-        <h3>首次运行<small>命令行模式下没有记录时怎么办</small></h3>
+        <h3>首次运行</h3>
         <div class="fields">
           <label class="field">
             <select data-key="update.first_run">
@@ -447,19 +446,6 @@ dialog.confirm .actions { justify-content: flex-end; }
               <option value="full">下载整个游戏资源</option>
               <option value="baseline">只记下版本号</option>
             </select>
-            <small>网页控制台总是会让你选；这一项主要影响计划任务等无人值守的运行。</small>
-          </label>
-        </div>
-      </div>
-      <div class="group">
-        <h3>高级<small>游戏大版本更新后用</small></h3>
-        <div class="fields">
-          <label class="field"><span>游戏版本 app_version</span>
-            <input type="text" class="mono" data-key="advanced.app_version" style="max-width:200px">
-            <small>提示「服务器不认识游戏版本」时改这里</small>
-          </label>
-          <label class="field"><span>Unity 版本</span>
-            <input type="text" class="mono" data-key="advanced.unity_version" style="max-width:200px">
           </label>
         </div>
       </div>
@@ -626,7 +612,7 @@ function renderStatus() {
     if (S.pending && (S.pending.bundles || S.pending.files)) {
       $("#s-pending").textContent = size(S.pending.bytes);
       $("#s-pending").className = "value hot";
-      $("#s-pending-sub").textContent = `${S.pending.bundles} 个资源包 / ${S.pending.files} 个文件`;
+      $("#s-pending-sub").textContent = `${S.pending.bundles} 个 Asset / ${S.pending.files} 个 Resource`;
     } else if (!L.has_baseline) {
       $("#s-pending").textContent = "—";
       $("#s-pending").className = "value";

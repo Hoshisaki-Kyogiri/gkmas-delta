@@ -21,8 +21,8 @@ from .ui import check_cancel, human_size, info, ok, step, warn
 
 def _summarise(manifest: dict) -> str:
     return (
-        f"{len(manifest.get('assetBundleList', []))} 个资源包 / "
-        f"{len(manifest.get('resourceList', []))} 个文件"
+        f"{len(manifest.get('assetBundleList', []))} 个 Asset / "
+        f"{len(manifest.get('resourceList', []))} 个 Resource"
     )
 
 

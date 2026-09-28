@@ -44,9 +44,9 @@ python -m umegkmas --web
 
 | 请求 | 响应大小 | 内容 |
 |---|---|---|
-| 全量 `list/0` | 4.99 MB | 24709 个资源包 / 21730 个文件 |
-| 从 v44 起 | 33 KB | 185 个资源包 / 122 个文件 |
-| 从 v45 起 | 12.8 KB | 0 个资源包 / 122 个文件 |
+| 全量 `list/0` | 4.99 MB | 24709 个 Asset / 21730 个 Resource |
+| 从 v44 起 | 33 KB | 185 个 Asset / 122 个 Resource |
+| 从 v45 起 | 12.8 KB | 0 个 Asset / 122 个 Resource |
 | 超过最新版本号 | 54 B | 空清单，附带当前最新版本号 |
 
 最后一种用来查询服务器最新版本，`--status` 和首次运行都用它。
@@ -89,9 +89,9 @@ python -m umegkmas --web
 - `"unitypy"`（默认）：纯 Python，绿色包里已经带了。
 - `"assetstudio"`：调用 `AssetStudioModCLI.exe`，需要装 .NET 9 运行时。程序本身不在仓库里，要自己下载放到 `AssetStudioModCLI/` 目录，或者用 `assetstudio_path` 指定路径。
 
-两者速度差不多：185 个资源包，AssetStudio 14~18 秒，UnityPy 开 12 线程 13 秒（单线程 65 秒）。依赖体积上 UnityPy 反而大一些（22.7 MB 对 15.7 MB）。默认用 UnityPy，是因为它不需要 .NET 运行时，绿色包才能解压直接用。
+两者速度差不多：185 个 Asset，AssetStudio 14~18 秒，UnityPy 开 12 线程 13 秒（单线程 65 秒）。依赖体积上 UnityPy 反而大一些（22.7 MB 对 15.7 MB）。默认用 UnityPy，是因为它不需要 .NET 运行时，绿色包才能解压直接用。
 
-在 v46 的 185 个资源包上用 `tools/ab_extract.py` 对比过两者的输出：
+在 v46 的 185 个 Asset 上用 `tools/ab_extract.py` 对比过两者的输出：
 
 ```
 仅 AssetStudio 有：0        真实像素差异：0        尺寸不一致：0
@@ -122,8 +122,8 @@ umegkmas/
 └─ data/
    ├─ state.json           本地版本记录
    ├─ manifests/           清单（全量和各次增量）
-   ├─ gkmas/Assets/        原始资源包，按 md5 命名
-   ├─ gkmas/Resource/      原始文件（音频、文本等）
+   ├─ gkmas/Assets/        原始 Asset，按 md5 命名
+   ├─ gkmas/Resource/      原始 Resource（音频、文本等）
    ├─ gkmas/UnobfuscateAssets/<版本>/<类型>/   解混淆后的 .unity3d
    └─ IMAGE/v<版本>/       抽出的 PNG
       └─ Converted/        转换后的 webp

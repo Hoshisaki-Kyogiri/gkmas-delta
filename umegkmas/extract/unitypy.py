@@ -106,7 +106,7 @@ def extract(input_dir: Path, output_dir: Path, unity_version: str, workers: int 
         warn(f"{input_dir} 下没有找到 .unity3d 文件。")
         return False
 
-    info(f"UnityPy 抽取贴图：{len(bundles)} 个资源包 -> {output_dir}")
+    info(f"UnityPy 抽取贴图：{len(bundles)} 个 Asset -> {output_dir}")
     total_images = 0
     failures = []
 
@@ -137,7 +137,7 @@ def extract(input_dir: Path, output_dir: Path, unity_version: str, workers: int 
         executor.shutdown(wait=True)
 
     if failures:
-        warn(f"{len(failures)} 个资源包抽取失败，例如：")
+        warn(f"{len(failures)} 个 Asset 抽取失败，例如：")
         for line in failures[:5]:
             detail(line)
     info(f"共抽出 {total_images} 张图片。")

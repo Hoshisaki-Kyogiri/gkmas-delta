@@ -157,7 +157,7 @@ def _download_ranged(url, temp_path, size, task_id, overall_id, progress):
 
 def _download_one(job, progress, overall_id, state, lock):
     check_cancel()
-    label = "资源包" if job["is_asset"] else "文件"
+    label = "Asset" if job["is_asset"] else "Resource"
     size = _parse_size(job["size"])
     task_id = progress.add_task(f"[cyan]{label} {job['name']}", total=size, start=False)
     temp_path = job["path"] + ".part"
