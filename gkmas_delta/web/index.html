@@ -1,0 +1,2153 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gkmas-delta</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+:root {
+  --side: 188px;
+  --bg: #fafaf9;
+  --side-bg: #f2f1ee;
+  --panel: #ffffff;
+  --sunk: #f4f3f0;
+  --line: #e4e2dd;
+  --line-strong: #d3d0c9;
+  --text: #1d1c1a;
+  --muted: #74716b;
+  --faint: #a19d95;
+  --accent: #706caa;
+  --accent-ink: #ffffff;
+  --accent-soft: #eeedf7;
+  --ok: #2e7d4f;
+  --warn: #9a6a00;
+  --warn-soft: #fbf3dc;
+  --err: #c0392b;
+  --err-soft: #fbeae8;
+  --log-bg: #1b1a18;
+  --log-text: #e4e0d8;
+  --log-muted: #8d887f;
+  /* All Noto, bundled under /fonts. SC shapes for the Chinese UI; lang="ja"
+     blocks switch to JP shapes (the same kanji are drawn differently). */
+  --sans: "Noto Sans SC Variable", "Noto Sans JP Variable", sans-serif;
+  --serif: "Noto Serif JP Variable", serif;
+  --mono: "Noto Sans Mono Variable", "Noto Sans SC Variable", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171716;
+    --side-bg: #1d1c1b;
+    --panel: #1f1e1d;
+    --sunk: #252422;
+    --line: #33312e;
+    --line-strong: #45423e;
+    --text: #e9e6e0;
+    --muted: #9a958d;
+    --faint: #6d6963;
+    --accent: #a5a1db;
+    --accent-ink: #17161f;
+    --accent-soft: #2a2839;
+    --ok: #6cc08f;
+    --warn: #d9ad4f;
+    --warn-soft: #362d17;
+    --err: #ec7b6f;
+    --err-soft: #3a211e;
+    --log-bg: #111110;
+  }
+}
+[lang|="ja"] { --sans: "Noto Sans JP Variable", "Noto Sans SC Variable", sans-serif; --mono: "Noto Sans Mono Variable", "Noto Sans JP Variable", monospace; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 13.5px/1.55 var(--sans); }
+button, input, select { font: inherit; color: inherit; }
+[hidden] { display: none !important; }
+svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
+.mono { font-family: var(--mono); }
+
+/* ---------- frame ---------- */
+aside {
+  position: fixed; inset: 0 auto 0 0; width: var(--side); z-index: 15;
+  background: var(--side-bg); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; padding: 18px 10px 14px;
+}
+.brand { padding: 0 10px 18px; }
+.brand b { display: block; font-family: var(--mono); font-size: 14px; letter-spacing: -.01em; }
+.brand span { color: var(--muted); font-size: 12px; }
+nav { display: flex; flex-direction: column; gap: 1px; }
+nav button {
+  border: 0; background: none; text-align: left; padding: 6px 10px; border-radius: 5px;
+  cursor: pointer; color: var(--muted); position: relative;
+}
+nav button:hover { color: var(--text); background: color-mix(in srgb, var(--text) 5%, transparent); }
+nav button[aria-selected="true"] { color: var(--text); font-weight: 600; background: var(--panel); box-shadow: inset 0 0 0 1px var(--line); }
+nav button[aria-selected="true"]::before { content: ""; position: absolute; left: -10px; top: 7px; bottom: 7px; width: 3px; border-radius: 0 2px 2px 0; background: var(--accent); }
+nav .sep { height: 1px; background: var(--line); margin: 8px 10px; }
+.side-foot { margin-top: auto; padding: 0 10px; font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
+.side-foot .mono { color: var(--text); }
+.conn { display: inline-flex; align-items: center; gap: 6px; }
+.conn i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+.conn.off i { background: var(--err); }
+
+main { margin-left: var(--side); padding: 22px 32px 56px; }
+section > .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 34px; margin-bottom: 16px; }
+section > .head h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+section > .head .sub { color: var(--muted); font-size: 13px; }
+.spacer { flex: 1; }
+
+/* ---------- controls ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px;
+  border: 1px solid var(--line-strong); background: var(--panel); border-radius: 6px;
+  cursor: pointer; white-space: nowrap; text-decoration: none;
+}
+.btn:hover:not(:disabled) { background: var(--sunk); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 88%, black); }
+.btn.big { height: 34px; padding: 0 16px; }
+.btn.link { border-color: transparent; background: none; color: var(--muted); padding: 0 6px; }
+.btn.link:hover:not(:disabled) { color: var(--text); background: none; }
+.btn.danger, .btn.link.danger { color: var(--err); }
+.btn.icon { width: 30px; padding: 0; justify-content: center; }
+input[type=search], input[type=text], input[type=number], select {
+  height: 30px; border: 1px solid var(--line-strong); background: var(--panel); border-radius: 6px; padding: 0 9px; min-width: 0;
+}
+input:focus, select:focus, .btn:focus-visible, nav button:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent); outline-offset: 1px; }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.seg button { border: 0; border-right: 1px solid var(--line); background: none; height: 28px; padding: 0 11px; cursor: pointer; color: var(--muted); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--sunk); color: var(--text); font-weight: 600; }
+.seg button:disabled { opacity: .4; cursor: not-allowed; }
+
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.toolbar input[type=search] { flex: 1; min-width: 180px; }
+.strip {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-height: 40px; margin-top: 10px;
+  padding: 4px 4px 4px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; color: var(--muted); background: var(--panel);
+}
+.strip b { color: var(--text); font-family: var(--mono); font-weight: 500; }
+.selbar { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--text); }
+.selbar b { font-family: var(--sans); font-weight: 600; }
+.count { color: var(--muted); font-size: 12.5px; margin: 16px 0 8px; }
+.more-row { text-align: center; margin-top: 14px; }
+
+/* ---------- overview ---------- */
+.kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+/* Dividers drawn as shadows so any column count lines up; the outer ones get clipped. */
+.kv > div { padding: 12px 14px; min-width: 0; box-shadow: 1px 0 0 var(--line), 0 1px 0 var(--line); }
+.kv .label { color: var(--muted); font-size: 12px; }
+.kv .value { font-family: var(--mono); font-size: 16px; margin-top: 2px; }
+.kv .value.good { color: var(--ok); }
+.kv .value.hot { color: var(--accent); }
+.kv .sub { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kv .path { font-family: var(--mono); font-size: 12.5px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kv .btn.link { padding: 0; height: auto; }
+
+.notice { margin-top: 12px; padding: 10px 14px; border-left: 3px solid; border-radius: 0 6px 6px 0; }
+.notice b { display: block; }
+.notice.warn { background: var(--warn-soft); border-color: var(--warn); }
+.notice.err { background: var(--err-soft); border-color: var(--err); }
+
+.block { margin-top: 26px; }
+.block > h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.block > h2 .spacer { flex: 1; }
+
+.options { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.opt { display: grid; grid-template-columns: 18px 1fr; gap: 2px 12px; width: 100%; text-align: left; padding: 12px 14px; border: 0; border-bottom: 1px solid var(--line); background: none; cursor: pointer; }
+.opt:last-child { border-bottom: 0; }
+.opt::before { content: ""; width: 14px; height: 14px; margin-top: 3px; border-radius: 50%; border: 1.5px solid var(--line-strong); grid-row: span 2; }
+.opt:hover:not(:disabled) { background: var(--sunk); }
+.opt:hover:not(:disabled)::before { border-color: var(--accent); }
+.opt:disabled { opacity: .5; cursor: not-allowed; }
+.opt b { font-weight: 600; }
+.opt span { color: var(--muted); font-size: 12.5px; }
+.tag { font-weight: 500; font-size: 12px; color: var(--accent); margin-left: 8px; }
+
+details.more { position: relative; }
+details.more summary { list-style: none; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more .menu {
+  position: absolute; top: calc(100% + 4px); right: 0; z-index: 25; min-width: 280px;
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 4px;
+}
+.menu button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 7px 10px; border-radius: 5px; cursor: pointer; }
+.menu button:hover { background: var(--sunk); }
+.menu button small { display: block; color: var(--muted); font-size: 12px; }
+.hint { color: var(--muted); font-size: 12.5px; }
+.update {
+  margin-top: 16px; display: flex; align-items: center; gap: 12px 18px; flex-wrap: wrap; padding: 16px 18px;
+  background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); border-radius: 8px;
+}
+.update #btn-update { height: 42px; padding: 0 24px; font-size: 15px; border-radius: 7px; }
+.update-text { flex: 1; min-width: 180px; display: grid; }
+.update-text b { font-size: 15px; font-family: var(--mono); font-weight: 600; }
+.update-text span { color: var(--muted); font-size: 12.5px; }
+.update-side { display: flex; gap: 8px; align-items: center; }
+
+.job { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 14px; display: grid; gap: 10px; }
+.job-top { display: flex; align-items: baseline; gap: 8px 12px; flex-wrap: wrap; }
+.job-top h3 { margin: 0; font-size: 14px; }
+.steps { display: flex; gap: 0; flex-wrap: wrap; color: var(--faint); font-size: 12.5px; }
+.steps span + span::before { content: "›"; margin: 0 7px; color: var(--faint); }
+.steps span.done { color: var(--muted); }
+.steps span.now { color: var(--text); font-weight: 600; }
+.job-now { display: flex; gap: 10px; align-items: baseline; font-size: 13px; }
+.job-now .what { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar { height: 4px; border-radius: 2px; background: var(--sunk); overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
+.bar.indeterminate > i { width: 30%; animation: slide 1.2s ease-in-out infinite; }
+@keyframes slide { from { margin-left: -30%; } to { margin-left: 100%; } }
+.job-stats { display: flex; gap: 18px; color: var(--muted); font-size: 12.5px; font-family: var(--mono); flex-wrap: wrap; }
+.job-stats b { color: var(--text); font-weight: 500; }
+
+.log {
+  background: var(--log-bg); color: var(--log-text); font: 12.5px/1.65 var(--mono);
+  height: 320px; overflow: auto; padding: 10px 14px; border-radius: 8px; white-space: pre-wrap; word-break: break-all;
+}
+.log .l { display: block; }
+.log .t { color: var(--log-muted); margin-right: 10px; }
+.log .ok { color: #8fd4a6; }
+.log .warn { color: #e8c170; }
+.log .error, .log .detail { color: #f19a8e; }
+.log .detail { padding-left: 2.4em; }
+.log .step { color: var(--log-muted); margin-top: 8px; }
+.log .step::before { content: "## "; }
+.log .empty { color: var(--log-muted); }
+
+.history { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.history li { display: grid; grid-template-columns: 70px 1fr auto; gap: 12px; padding: 7px 14px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.history li:last-child { border-bottom: 0; }
+.history .rev { font-family: var(--mono); }
+.history .note { color: var(--muted); }
+.history .when { color: var(--muted); font-family: var(--mono); font-size: 12px; }
+
+/* ---------- tables (audio, video) ---------- */
+.table { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+.table .th, .table .row {
+  display: grid; align-items: center; gap: 12px; padding: 0 12px;
+  grid-template-columns: 18px 32px minmax(0, 1fr) 96px 110px 56px 72px;
+}
+.table .th { height: 32px; color: var(--muted); font-size: 12px; border-bottom: 1px solid var(--line); background: var(--sunk); }
+.table .row { width: 100%; min-height: 44px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; cursor: pointer; position: relative; }
+.table .row:last-child { border-bottom: 0; }
+.table .row:hover { background: var(--sunk); }
+.table .row.selected { background: var(--accent-soft); }
+.table .row.playing .name { color: var(--accent); }
+.table .row.playing::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+.row .thumb { width: 32px; height: 32px; border-radius: 4px; background: var(--sunk); display: grid; place-items: center; color: var(--faint); overflow: hidden; }
+.row .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.row .name { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .c { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.row .num { color: var(--muted); font-family: var(--mono); font-size: 12px; text-align: right; }
+.row .state { font-size: 12px; color: var(--ok); }
+.row .state.plain { color: var(--faint); font-family: var(--mono); }
+.pick { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--line-strong); background: var(--panel); display: grid; place-items: center; }
+.selected .pick { background: var(--accent); border-color: var(--accent); }
+.selected .pick::after { content: ""; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+.marquee { position: absolute; z-index: 40; border: 1px solid var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); pointer-events: none; }
+body.dragging { user-select: none; }
+body.dragging * { cursor: crosshair !important; }
+
+/* ---------- gallery ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.tile { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--panel); cursor: zoom-in; padding: 0; text-align: left; }
+.tile:hover { border-color: var(--line-strong); }
+.tile .img { aspect-ratio: 1; display: grid; place-items: center; background: repeating-conic-gradient(var(--sunk) 0 25%, var(--panel) 0 50%) 0 0 / 14px 14px; }
+.tile img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.tile .cap { padding: 5px 7px; font: 11.5px/1.4 var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-top: 1px solid var(--line); }
+.empty-state { color: var(--muted); padding: 60px 16px; text-align: center; border: 1px dashed var(--line-strong); border-radius: 8px; }
+
+dialog.viewer { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 96vh; }
+dialog.viewer::backdrop { background: rgba(10,10,10,.86); }
+.viewer .frame { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.viewer img { max-width: 92vw; max-height: 82vh; object-fit: contain; background: repeating-conic-gradient(#2a2a2a 0 25%, #333 0 50%) 0 0 / 20px 20px; }
+.viewer video { max-width: 92vw; max-height: 80vh; background: #000; }
+.viewer .meta { color: #ddd; font-size: 13px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.viewer .meta .name { font-family: var(--mono); margin-right: 6px; }
+.viewer .meta .btn { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #eee; }
+.viewer .meta .btn:hover:not(:disabled) { background: rgba(255,255,255,.16); }
+
+/* ---------- stories ---------- */
+.story-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+.story-side { position: sticky; top: 16px; display: flex; flex-direction: column; max-height: calc(100vh - 32px); border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.story-side .filters { display: grid; gap: 6px; padding: 10px; border-bottom: 1px solid var(--line); }
+.story-side .filters .row2 { display: flex; gap: 6px; }
+.story-side .filters .row2 > * { flex: 1; }
+.story-side .filters .row2 .btn { flex: none; }
+.story-list { overflow: auto; flex: 1; }
+.story-item { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); background: none; padding: 8px 12px; cursor: pointer; }
+.story-item:hover { background: var(--sunk); }
+.story-item.active { background: var(--accent-soft); box-shadow: inset 3px 0 var(--accent); }
+.story-item b { display: block; font: 500 12.5px/1.5 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.story-item span { color: var(--muted); font-size: 12px; }
+.story-item q { display: block; font-size: 12px; quotes: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; font-family: var(--serif); }
+.story-count { color: var(--muted); font-size: 12px; padding: 7px 12px; border-top: 1px solid var(--line); }
+.reader { min-width: 0; }
+.reader-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+.reader-head h2 { margin: 0; font: 600 15px/1.4 var(--mono); }
+.reader-head .label { color: var(--muted); font-size: 12.5px; }
+.type-ctl { display: inline-flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; background: var(--panel); }
+.type-ctl button { border: 0; border-right: 1px solid var(--line); background: none; height: 26px; min-width: 30px; padding: 0 8px; cursor: pointer; color: var(--muted); }
+.type-ctl button:last-child { border-right: 0; }
+.type-ctl button:hover:not(:disabled) { color: var(--text); background: var(--sunk); }
+.type-ctl button:disabled { opacity: .35; cursor: not-allowed; }
+.type-ctl .size { min-width: 38px; text-align: center; font: 12px var(--mono); color: var(--text); border-right: 1px solid var(--line); line-height: 26px; }
+.type-ctl .small { font-size: 11px; }
+.type-ctl .big { font-size: 15px; }
+.parts { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 6px; overflow: hidden; }
+.parts button { border: 0; border-right: 1px solid var(--line); background: var(--panel); height: 26px; min-width: 34px; padding: 0 8px; cursor: pointer; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.parts button:last-child { border-right: 0; }
+.parts button[aria-pressed="true"] { background: var(--sunk); color: var(--text); font-weight: 600; }
+.script { --size: 16px; font: var(--size)/1.9 var(--serif); max-width: 48em; margin: 0 auto; padding: 10px 0 40px; }
+.script.sans { font-family: var(--sans); }
+.script .line { display: grid; grid-template-columns: 7.5em minmax(0, 1fr); gap: 0 18px; padding: 7px 10px; margin: 0 -10px; border-radius: 6px; }
+/* The name sits on the first text line whatever the text size. */
+.script .who { font: 600 max(12px, calc(var(--size) * .82)) var(--sans); height: calc(var(--size) * 1.9); color: var(--text); text-align: right; display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.script .who.p { color: var(--muted); font-weight: 500; }
+.script .say { white-space: pre-wrap; }
+.script .line.speaking { background: var(--accent-soft); }
+.script .narr { text-align: center; color: var(--muted); padding: 18px 0; white-space: pre-wrap; }
+.script .choice { display: flex; flex-direction: column; gap: 4px; margin: 14px 0 14px calc(7.5em + 18px); padding-left: 12px; border-left: 2px solid var(--accent); font-family: var(--sans); font-size: 14px; }
+.script .choice span::before { content: "▸ "; color: var(--accent); }
+.script ruby rt { font-size: .5em; color: var(--muted); }
+.script mark { background: #f3df8a; color: #1d1c1a; border-radius: 2px; }
+.say-btn { border: 0; background: none; color: var(--faint); padding: 0; cursor: pointer; display: inline-flex; }
+.say-btn:hover { color: var(--accent); }
+.line.speaking .say-btn { color: var(--accent); }
+.reader-empty { color: var(--muted); padding: 80px 0; text-align: center; }
+.back { display: none; }
+
+/* ---------- settings ---------- */
+.form { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); max-width: 860px; }
+.group { display: grid; grid-template-columns: 150px 1fr; gap: 20px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+.group h3 { margin: 0; font-size: 13.5px; font-weight: 600; }
+.fields { display: grid; gap: 14px; }
+.field { display: grid; gap: 4px; }
+.field > span { font-weight: 500; }
+.field > small, .check small { color: var(--muted); font-size: 12px; }
+.field input[type=text], .field input[type=number], .field select { width: 100%; max-width: 440px; }
+.check { display: grid; grid-template-columns: auto 1fr; gap: 0 10px; align-items: start; cursor: pointer; }
+.check input { margin-top: 3px; accent-color: var(--accent); width: 15px; height: 15px; }
+.check small { grid-column: 2; }
+.savebar { display: flex; gap: 8px; align-items: center; padding: 12px 20px; background: var(--sunk); border-radius: 0 0 8px 8px; position: sticky; bottom: 0; }
+.savebar .msg { color: var(--muted); font-size: 12.5px; }
+
+/* ---------- overlays ---------- */
+.player {
+  position: fixed; left: var(--side); right: 0; bottom: 0; z-index: 20;
+  background: var(--panel); border-top: 1px solid var(--line-strong);
+}
+.player .wrap { display: flex; align-items: center; gap: 10px; padding: 8px 20px; }
+.player .cover { width: 40px; height: 40px; border-radius: 4px; background: var(--sunk); flex: none; display: grid; place-items: center; color: var(--faint); overflow: hidden; }
+.player .cover img { width: 100%; height: 100%; object-fit: cover; }
+.player .now { min-width: 0; width: 220px; flex: none; }
+.player .now b { display: block; font: 500 13px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player .now span { color: var(--muted); font-size: 12px; }
+.player audio { flex: 1; min-width: 0; height: 36px; }
+body.has-player main { padding-bottom: 90px; }
+
+dialog.confirm { border: 1px solid var(--line-strong); border-radius: 10px; padding: 20px; max-width: 420px; background: var(--panel); color: var(--text); box-shadow: 0 16px 48px rgba(0,0,0,.18); }
+dialog.confirm::backdrop { background: rgba(0,0,0,.35); }
+dialog.confirm h3 { margin: 0 0 6px; font-size: 15px; }
+dialog.confirm p { margin: 0 0 18px; color: var(--muted); }
+dialog.confirm .actions { display: flex; gap: 8px; justify-content: flex-end; }
+dialog.bank { width: min(560px, 92vw); padding: 0; }
+.bank-head { display: flex; align-items: flex-start; gap: 6px; padding: 16px 16px 10px; border-bottom: 1px solid var(--line); }
+.bank-head > div { flex: 1; min-width: 0; }
+.bank-head h3 { margin: 0; font: 600 14px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; }
+.bank-head p { margin: 2px 0 0; font-size: 12.5px; }
+.bank-list { max-height: 60vh; overflow: auto; padding: 4px; }
+.cue { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font: 12.5px/1.5 var(--mono); }
+.cue:hover { background: var(--sunk); }
+.cue.playing { background: var(--accent-soft); color: var(--accent); }
+
+.busy, .toast {
+  position: fixed; left: calc(50% + var(--side) / 2); transform: translateX(-50%); z-index: 60;
+  background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 6px; font-size: 13px; max-width: 80vw;
+}
+.busy { top: 16px; display: flex; align-items: center; gap: 10px; }
+.toast { bottom: 20px; opacity: 0; transition: opacity .2s, transform .2s; transform: translate(-50%, 8px); pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+body.has-player .toast { bottom: 76px; }
+.spinner { width: 12px; height: 12px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.task {
+  position: fixed; right: 20px; bottom: 20px; z-index: 30; width: 280px; background: var(--panel);
+  border: 1px solid var(--line-strong); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 10px 12px; display: grid; gap: 8px;
+}
+body.has-player .task { bottom: 78px; }
+.task-top { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.task-top span:nth-child(2) { flex: 1; font-family: var(--mono); font-size: 12.5px; }
+
+/* ---------- wide windows: overview in two columns, log fills the height ---------- */
+@media (min-width: 1400px) {
+  /* The last 1fr row soaks up the tall log, so the left column's blocks stay packed. */
+  #tab-home { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto repeat(8, min-content) 1fr; column-gap: 28px; }
+  #tab-home > * { grid-column: 1; }
+  #tab-home > .head { grid-column: 1 / -1; }
+  #tab-home > .kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #log-block { grid-column: 2; grid-row: 2 / -1; margin-top: 0; }
+  #log-block .log { height: calc(100vh - 170px); min-height: 320px; }
+  .story-layout { grid-template-columns: 340px minmax(0, 1fr); gap: 28px; }
+}
+
+/* ---------- narrower windows (and zoomed-in pages) ---------- */
+@media (max-width: 1180px) {
+  main { padding: 20px 24px 56px; }
+  .table .th, .table .row { grid-template-columns: 18px 32px minmax(0, 1fr) 96px 56px 72px; }
+  .table .th > :nth-child(5), .table .row > :nth-child(5) { display: none; }
+  .kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .story-layout { grid-template-columns: 250px minmax(0, 1fr); gap: 16px; }
+  .script .line { grid-template-columns: 6em minmax(0, 1fr); gap: 0 14px; }
+  .script .choice { margin-left: calc(6em + 14px); }
+}
+
+@media (max-width: 980px) {
+  aside { position: sticky; top: 0; inset: auto; width: auto; height: auto; flex-direction: row; align-items: center; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--line); gap: 10px; }
+  .brand { padding: 0; }
+  .brand span, .side-foot .ver, nav .sep { display: none; }
+  nav { flex-direction: row; overflow-x: auto; flex: 1; }
+  nav button { white-space: nowrap; }
+  nav button[aria-selected="true"]::before { display: none; }
+  .side-foot { margin: 0; }
+  main { margin-left: 0; padding: 16px 18px 56px; }
+  .story-layout { grid-template-columns: 1fr; }
+  .story-side { position: static; max-height: none; }
+  .story-list { max-height: 60vh; }
+  .story-layout.reading .story-side { display: none; }
+  .story-layout:not(.reading) .reader { display: none; }
+  .back { display: inline-flex; }
+  .group { grid-template-columns: 1fr; gap: 10px; }
+  .player { left: 0; }
+  .busy, .toast { left: 50%; }
+}
+
+@media (max-width: 640px) {
+  main { padding: 14px 14px 56px; }
+  .kv { grid-template-columns: 1fr; }
+  .table .th { display: none; }
+  .table .row { grid-template-columns: 18px 32px minmax(0, 1fr) 64px; }
+  .table .row .c, .table .row .state { display: none; }
+  .script .line { grid-template-columns: 1fr; }
+  .script .who { text-align: left; justify-content: flex-start; height: auto; line-height: 1.6; }
+  .script .choice { margin-left: 0; }
+  .player .wrap { flex-wrap: wrap; gap: 6px 10px; padding: 8px 12px; }
+  .player .now { width: auto; flex: 1; }
+  .player audio { width: 100%; flex: none; order: 9; }
+  body.has-player main { padding-bottom: 130px; }
+}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><b>gkmas-delta</b><span>学园偶像大师资源更新</span></div>
+  <nav role="tablist">
+    <button role="tab" data-tab="home" aria-selected="true">概览</button>
+    <button role="tab" data-tab="gallery" aria-selected="false">图片</button>
+    <button role="tab" data-tab="audio" aria-selected="false">音频</button>
+    <button role="tab" data-tab="video" aria-selected="false">视频</button>
+    <button role="tab" data-tab="story" aria-selected="false">剧情</button>
+    <div class="sep"></div>
+    <button role="tab" data-tab="settings" aria-selected="false">设置</button>
+  </nav>
+  <div class="side-foot">
+    <span class="ver">本地 <span class="mono" id="f-local">—</span> · 服务器 <span class="mono" id="f-server">—</span></span>
+    <span class="conn" id="conn"><i></i><span>已连接</span></span>
+  </div>
+</aside>
+
+<main>
+  <!-- ================= 概览 ================= -->
+  <section id="tab-home">
+    <div class="head">
+      <h1>概览</h1>
+    </div>
+
+    <div class="kv">
+      <div>
+        <div class="label">本地版本</div>
+        <div class="value" id="s-local">—</div>
+        <div class="sub" id="s-local-sub">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">服务器版本</div>
+        <div class="value" id="s-server">—</div>
+        <div class="sub" id="s-server-sub">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">待更新</div>
+        <div class="value" id="s-pending">—</div>
+        <div class="sub" id="s-pending-sub">&nbsp;</div>
+      </div>
+      <div>
+        <div class="label">数据目录</div>
+        <div class="path" id="s-dir" title="">—</div>
+        <div class="sub"><button class="btn link" data-open="data">打开文件夹</button></div>
+      </div>
+    </div>
+
+    <div class="notice warn" id="version-banner" hidden></div>
+    <div class="notice err" id="server-banner" hidden></div>
+
+    <div class="update" id="main-actions" hidden>
+      <button class="btn primary" id="btn-update" data-run="update">检查并下载更新</button>
+      <div class="update-text"><b id="update-title">检查更新</b><span id="action-hint"></span></div>
+      <div class="update-side">
+        <button class="btn" id="btn-refresh" data-icon="refresh">刷新状态</button>
+        <details class="more" id="main-more">
+          <summary class="btn">其他操作 <i data-icon="down"></i></summary>
+          <div class="menu">
+            <button data-run="update" data-force="1">重新处理当前版本<small>版本号没变也重新下载校验、解混淆、抽图</small></button>
+            <button data-run="latest">重新下载最新一个版本<small>只取服务器最新一次更新的内容</small></button>
+            <button data-run="full" data-confirm="full">下载整个游戏资源<small>60 GB 以上，很慢</small></button>
+            <button data-run="baseline">只记录当前版本号<small>跳过所有待更新内容，不下载</small></button>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="block" id="first-run" hidden>
+      <h2>第一次运行：要下载多少</h2>
+      <div class="options">
+        <button class="opt" data-run="latest">
+          <b>下载最新一个版本<span class="tag">推荐</span></b>
+          <span>只取最近一次更新的内容，通常几十到几百 MB。之后每次只下新增的。</span>
+        </button>
+        <button class="opt" data-run="full" data-confirm="full">
+          <b>下载整个游戏资源</b>
+          <span>60 GB 以上，很慢。需要全套素材时才选。</span>
+        </button>
+        <button class="opt" data-run="baseline">
+          <b>只记下版本号</b>
+          <span>什么都不下载，从下一次游戏更新开始追。</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="block" id="job-card" hidden>
+      <h2>正在运行</h2>
+      <div class="job">
+        <div class="job-top">
+          <h3 id="job-title"></h3>
+          <div class="steps" id="job-steps"></div>
+          <span class="spacer"></span>
+          <button class="btn danger" id="btn-cancel">取消</button>
+        </div>
+        <div class="job-now"><b id="job-step">准备中</b><span class="what" id="job-what"></span></div>
+        <div class="bar indeterminate" id="job-bar"><i></i></div>
+        <div class="job-stats" id="job-stats"></div>
+      </div>
+    </div>
+
+    <div class="block" id="log-block">
+      <h2>日志<span class="spacer"></span><button class="btn link" id="btn-copy-log">复制</button><button class="btn link" id="btn-clear-log">清空</button></h2>
+      <div class="log" id="log"><span class="l empty">还没有日志。</span></div>
+    </div>
+
+    <div class="block" id="history-card" hidden>
+      <h2>最近记录</h2>
+      <ul class="history" id="history"></ul>
+    </div>
+  </section>
+
+  <!-- ================= 图片 ================= -->
+  <section id="tab-gallery" hidden>
+    <div class="head"><h1>图片</h1><span class="sub">从 Asset 里抽出来的贴图</span></div>
+    <div class="toolbar">
+      <select id="g-rev" aria-label="版本"></select>
+      <div class="seg" id="g-source">
+        <button data-source="png" aria-pressed="true">PNG 原图</button>
+        <button data-source="webp" aria-pressed="false">WebP 转换</button>
+      </div>
+      <input type="search" id="g-q" placeholder="按文件名或路径筛选，例如 costume">
+      <button class="btn" id="g-open"><i data-icon="folder"></i>打开文件夹</button>
+    </div>
+    <div class="count" id="g-count"></div>
+    <div class="grid" id="g-grid"></div>
+    <div class="more-row"><button class="btn" id="g-more" hidden>加载更多</button></div>
+  </section>
+
+  <!-- ================= 音频 ================= -->
+  <section id="tab-audio" hidden>
+    <div class="head"><h1>音频</h1><span class="sub">Resource 里的歌曲、BGM、语音和音效</span></div>
+    <div class="toolbar">
+      <div class="seg" id="a-kind"></div>
+      <select id="a-char" aria-label="角色"><option value="">全部角色</option></select>
+      <select id="a-ver" aria-label="版本"><option value="">全部版本</option></select>
+      <input type="search" id="a-q" placeholder="按文件名筛选">
+    </div>
+    <div class="strip" id="a-convbar">
+      <span>已转换 <b id="a-conv-size">—</b> · data/AUDIO</span>
+      <span class="spacer"></span>
+      <button class="btn link" data-open="audio"><i data-icon="folder"></i>打开文件夹</button>
+      <button class="btn link danger" id="a-clean-all">全部清理</button>
+    </div>
+    <div class="strip selbar" id="a-selbar" hidden>
+      <b id="a-selcount"></b>
+      <span class="spacer"></span>
+      <button class="btn link" id="a-sel-all">全选当前筛选</button>
+      <button class="btn link" id="a-sel-none">取消选择</button>
+      <button class="btn" id="a-sel-clean">删除所选的转换文件</button>
+      <button class="btn primary" id="a-sel-convert">转换所选</button>
+    </div>
+    <div class="count" id="a-count"></div>
+    <div class="table">
+      <div class="th"><span></span><span></span><span>名称</span><span>类型</span><span>角色</span><span>版本</span><span>状态</span></div>
+      <div id="a-list"></div>
+    </div>
+    <div class="more-row"><button class="btn" id="a-more" hidden>显示更多</button></div>
+  </section>
+
+  <!-- ================= 视频 ================= -->
+  <section id="tab-video" hidden>
+    <div class="head"><h1>视频</h1><span class="sub">Resource 里的 .usm，第一次打开时转成 mp4</span></div>
+    <div class="toolbar">
+      <div class="seg" id="v-group"></div>
+      <select id="v-char" aria-label="角色"><option value="">全部角色</option></select>
+      <select id="v-ver" aria-label="版本"><option value="">全部版本</option></select>
+      <input type="search" id="v-q" placeholder="按文件名筛选">
+    </div>
+    <div class="strip" id="v-convbar">
+      <span>已转换 <b id="v-conv-size">—</b> · data/VIDEO</span>
+      <span class="spacer"></span>
+      <button class="btn link" data-open="video"><i data-icon="folder"></i>打开文件夹</button>
+      <button class="btn link danger" id="v-clean-all">全部清理</button>
+    </div>
+    <div class="strip selbar" id="v-selbar" hidden>
+      <b id="v-selcount"></b>
+      <span class="spacer"></span>
+      <button class="btn link" id="v-sel-all">全选当前筛选</button>
+      <button class="btn link" id="v-sel-none">取消选择</button>
+      <button class="btn" id="v-sel-clean">删除所选的转换文件</button>
+      <button class="btn primary" id="v-sel-convert">转换所选</button>
+    </div>
+    <div class="count" id="v-count"></div>
+    <div class="table">
+      <div class="th"><span></span><span></span><span>名称</span><span>类型</span><span>角色</span><span>版本</span><span>大小</span></div>
+      <div id="v-list"></div>
+    </div>
+    <div class="more-row"><button class="btn" id="v-more" hidden>显示更多</button></div>
+  </section>
+
+  <!-- ================= 剧情 ================= -->
+  <section id="tab-story" hidden>
+    <div class="head"><h1>剧情</h1><span class="sub">Resource 里的 adv_*.txt</span></div>
+    <div class="story-layout" id="s-layout">
+      <div class="story-side">
+        <div class="filters">
+          <div class="row2">
+            <select id="st-cat" aria-label="分类"><option value="">全部分类</option></select>
+            <select id="st-char" aria-label="角色"><option value="">全部角色</option></select>
+          </div>
+          <select id="st-ver" aria-label="版本"><option value="">全部版本</option></select>
+          <div class="row2">
+            <input type="search" id="st-q" placeholder="筛选文件名，回车搜台词">
+            <button class="btn" id="st-search">搜台词</button>
+          </div>
+        </div>
+        <div class="story-list" id="st-list"></div>
+        <div class="story-count" id="st-count"></div>
+      </div>
+      <div class="reader" id="st-reader" lang="ja">
+        <div class="reader-empty">从左边选一个剧情。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 设置 ================= -->
+  <section id="tab-settings" hidden>
+    <div class="head"><h1>设置</h1><span class="sub">保存到 config.toml，原有注释会保留</span></div>
+    <form class="form" id="cfg" autocomplete="off">
+      <div class="group">
+        <h3>存储</h3>
+        <div class="fields">
+          <label class="field"><span>数据目录</span>
+            <input type="text" class="mono" data-key="paths.data_dir" placeholder="留空 = 程序目录下的 data 文件夹">
+            <small>全量下载需要 60 GB 以上。C 盘不够就填别的盘，例如 D:/gkmas-data</small>
+          </label>
+        </div>
+      </div>
+      <div class="group">
+        <h3>下载</h3>
+        <div class="fields">
+          <label class="check"><input type="checkbox" data-key="download.assets"><span>下载 Asset</span><small>图片 / 模型 / 特效等 assetbundle</small></label>
+          <label class="check"><input type="checkbox" data-key="download.resources"><span>下载 Resource</span><small>音频 / 文本等</small></label>
+          <label class="check"><input type="checkbox" data-key="download.verify_md5"><span>校验已有文件的 md5</span><small>关掉会快一点，但同名更新的文件可能被漏掉</small></label>
+          <label class="field"><span>同时下载连接数</span>
+            <input type="number" min="1" max="64" data-key="download.workers" style="max-width:120px">
+            <small>网络不好或经常失败就调小，例如 8</small>
+          </label>
+        </div>
+      </div>
+      <div class="group">
+        <h3>处理</h3>
+        <div class="fields">
+          <label class="check"><input type="checkbox" data-key="process.deobfuscate"><span>解混淆 Asset</span><small>抽图的前提，一般不要关</small></label>
+          <label class="check"><input type="checkbox" data-key="process.extract_images"><span>抽取贴图为 PNG</span></label>
+          <label class="check"><input type="checkbox" data-key="process.convert_webp"><span>转换 WebP</span><small>把被压扁的立绘恢复比例后另存为 webp</small></label>
+          <label class="check"><input type="checkbox" data-key="process.keep_base_copy"><span>额外保存跨版本汇总副本</span><small>会让磁盘占用翻倍，一般不需要</small></label>
+          <label class="field"><span>抽图方式</span>
+            <select data-key="extract.backend">
+              <option value="unitypy">UnityPy（默认，内置，不用另装东西）</option>
+              <option value="assetstudio">AssetStudio（需要 .NET 9 运行时和 AssetStudioModCLI）</option>
+            </select>
+          </label>
+          <label class="field" id="f-asp"><span>AssetStudioModCLI.exe 路径</span>
+            <input type="text" class="mono" data-key="extract.assetstudio_path" placeholder="留空 = 自动在程序目录下查找">
+          </label>
+        </div>
+      </div>
+      <div class="group">
+        <h3>首次运行</h3>
+        <div class="fields">
+          <label class="field">
+            <select data-key="update.first_run">
+              <option value="ask">每次问我</option>
+              <option value="latest">下载最新一个版本的更新内容</option>
+              <option value="full">下载整个游戏资源</option>
+              <option value="baseline">只记下版本号</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div class="savebar">
+        <button class="btn primary" type="submit" id="cfg-save">保存</button>
+        <button class="btn" type="button" id="cfg-reset">撤销修改</button>
+        <span class="msg" id="cfg-msg"></span>
+        <span class="spacer"></span>
+        <button class="btn link" type="button" data-open="config"><i data-icon="folder"></i>config.toml 所在文件夹</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<dialog class="confirm" id="confirm">
+  <h3 id="confirm-title"></h3>
+  <p id="confirm-text"></p>
+  <div class="actions">
+    <button class="btn" value="cancel" id="confirm-no">算了</button>
+    <button class="btn primary" value="ok" id="confirm-yes">确定</button>
+  </div>
+</dialog>
+
+<dialog class="viewer" id="viewer">
+  <div class="frame">
+    <img id="v-img" alt="">
+    <div class="meta">
+      <span class="name" id="v-name"></span>
+      <span id="v-size" style="opacity:.7;margin-right:6px"></span>
+      <button class="btn icon" id="v-prev" title="上一张" data-icon="prev"></button>
+      <button class="btn icon" id="v-next" title="下一张" data-icon="next"></button>
+      <button class="btn" id="v-reveal"><i data-icon="folder"></i>在文件夹中显示</button>
+      <a class="btn" id="v-raw" target="_blank" rel="noopener"><i data-icon="external"></i>新标签打开</a>
+      <button class="btn icon" id="v-close" title="关闭" data-icon="close"></button>
+    </div>
+  </div>
+</dialog>
+
+<div class="player" id="player" hidden>
+  <div class="wrap">
+    <div class="cover" id="p-cover"></div>
+    <div class="now"><b id="p-title"></b><span id="p-sub"></span></div>
+    <button class="btn link icon" id="p-prev" title="上一首" data-icon="prev"></button>
+    <audio id="p-audio" controls preload="none"></audio>
+    <button class="btn link icon" id="p-next" title="下一首" data-icon="next"></button>
+    <button class="btn link icon" id="p-reveal" title="在文件夹中显示" data-icon="folder"></button>
+    <button class="btn link icon" id="p-close" title="关闭" data-icon="close"></button>
+  </div>
+</div>
+
+<dialog class="confirm bank" id="bank">
+  <div class="bank-head">
+    <div><h3 id="bank-title"></h3><p id="bank-sub"></p></div>
+    <button class="btn link" id="bank-reveal"><i data-icon="folder"></i>在文件夹中显示</button>
+    <button class="btn link icon" id="bank-close" title="关闭" data-icon="close"></button>
+  </div>
+  <div class="bank-list" id="bank-list"></div>
+</dialog>
+
+<dialog class="viewer" id="video">
+  <div class="frame">
+    <video id="vd-player" controls playsinline></video>
+    <div class="meta">
+      <span class="name" id="vd-title"></span>
+      <button class="btn" id="vd-reveal"><i data-icon="folder"></i>mp4 所在位置</button>
+      <button class="btn" id="vd-source"><i data-icon="folder"></i>原文件所在位置</button>
+      <button class="btn icon" id="vd-close" title="关闭" data-icon="close"></button>
+    </div>
+  </div>
+</dialog>
+
+<div class="task" id="task" hidden>
+  <div class="task-top"><span class="spinner"></span><span id="task-text"></span><button class="btn link" id="task-cancel">取消</button></div>
+  <div class="bar"><i id="task-bar"></i></div>
+</div>
+
+<div class="busy" id="busy" hidden><span class="spinner"></span><span id="busy-text"></span></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $ = (sel, root = document) => root.querySelector(sel);
+
+// Line icons, 24x24 grid, drawn with the current text colour.
+const ICONS = {
+  folder: '<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H9l2 2h8.5A1.5 1.5 0 0 1 21 9.5v8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/>',
+  play: '<path class="f" d="M8 5.5v13l10.5-6.5z"/>',
+  prev: '<path d="M6 6v12"/><path class="f" d="M18 6v12l-9-6z"/>',
+  next: '<path d="M18 6v12"/><path class="f" d="M6 6v12l9-6z"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
+  external: '<path d="M14 4.5h5.5V10M19.5 4.5 11 13"/><path d="M18 14v4.5a1 1 0 0 1-1 1H5.5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1H10"/>',
+  down: '<path d="M7 10l5 5 5-5"/>',
+  wave: '<path d="M4 12h1.5M8 8.5v7M11.5 5.5v13M15 9v6M18.5 11v2"/>',
+  film: '<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M8 5v14M16 5v14M4 9.5h4M4 14.5h4M16 9.5h4M16 14.5h4"/>',
+};
+function icon(name) {
+  // Filled shapes are marked with class "f" so one stroke style fits all.
+  const body = ICONS[name].replaceAll('class="f"', 'fill="currentColor" stroke="none"');
+  return `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
+}
+function fillIcons(root = document) {
+  for (const el of root.querySelectorAll("[data-icon]")) {
+    const svg = icon(el.dataset.icon);
+    if (el.tagName === "I") el.outerHTML = svg;
+    else el.innerHTML = svg + el.innerHTML;
+    el.removeAttribute("data-icon");
+  }
+}
+const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+const MODE_LABEL = { update: "检查并下载更新", latest: "下载最新一个版本", full: "下载整个游戏资源", baseline: "只记录版本号", convert: "批量转换" };
+const RESULT_LABEL = { ok: "完成", failed: "部分文件失败", cancelled: "已取消", error: "出错了" };
+const NOTE_LABEL = { update: "增量更新", latest: "最新一版", full: "全量", baseline: "只记录版本号" };
+const STAGES = ["获取清单", "下载", "解混淆", "抽取贴图", "转换 webp", "完成"];
+
+const state = { local: null, server: null, job: null, serverError: null };
+
+// ---------------------------------------------------------------- helpers
+async function api(path, body) {
+  const opts = body === undefined ? {} : {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Gkmas-Delta": "1" },
+    body: JSON.stringify(body),
+  };
+  const res = await fetch(path, opts);
+  let data = null;
+  try { data = await res.json(); } catch { /* non-JSON error page */ }
+  if (!res.ok) {
+    const err = new Error((data && data.error) || `HTTP ${res.status}`);
+    err.hint = data && data.hint;
+    err.tool = data && data.tool;
+    throw err;
+  }
+  return data;
+}
+
+function size(bytes) {
+  if (bytes == null) return "";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  while (bytes >= 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+  return `${bytes.toFixed(bytes >= 100 || i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function duration(sec) {
+  if (!isFinite(sec) || sec < 0) return "";
+  sec = Math.round(sec);
+  if (sec < 60) return `${sec} 秒`;
+  if (sec < 3600) return `${Math.floor(sec / 60)} 分 ${sec % 60} 秒`;
+  return `${Math.floor(sec / 3600)} 小时 ${Math.floor(sec % 3600 / 60)} 分`;
+}
+
+function when(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+let toastTimer;
+function toast(text) {
+  const el = $("#toast");
+  el.textContent = text;
+  el.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+function confirmBox(title, text, yes = "确定") {
+  const dlg = $("#confirm");
+  $("#confirm-title").textContent = title;
+  $("#confirm-text").textContent = text;
+  $("#confirm-yes").textContent = yes;
+  dlg.showModal();
+  return new Promise(resolve => {
+    const done = ok => { dlg.close(); $("#confirm-yes").onclick = $("#confirm-no").onclick = null; resolve(ok); };
+    $("#confirm-yes").onclick = () => done(true);
+    $("#confirm-no").onclick = () => done(false);
+    dlg.oncancel = () => done(false);
+  });
+}
+
+// ---------------------------------------------------------------- tabs
+function showTab(name) {
+  $$("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === name));
+  $$("main > section").forEach(s => s.hidden = s.id !== `tab-${name}`);
+  if (name === "gallery") loadGallery();
+  if (name === "audio") loadAudio();
+  if (name === "story") loadStories();
+  if (name === "video") loadVideos();
+  if (name === "settings") loadConfig();
+  try { localStorage.setItem("gkmas-delta.tab", name); } catch { /* storage unavailable */ }
+}
+$$("nav button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+// ---------------------------------------------------------------- status
+async function refreshLocal() {
+  const data = await api("/api/state");
+  state.local = data.local;
+  state.job = data.job.running;
+  renderStatus();
+  renderJob();
+}
+
+async function refreshServer() {
+  $("#s-server").textContent = "…";
+  $("#s-server-sub").textContent = "正在询问服务器";
+  $("#s-pending").textContent = "…";
+  try {
+    state.server = await api("/api/server");
+    state.serverError = null;
+  } catch (err) {
+    state.server = null;
+    state.serverError = err;
+  }
+  renderStatus();
+}
+
+function renderStatus() {
+  const L = state.local, S = state.server;
+  if (!L) return;
+
+  $("#s-local").textContent = L.has_baseline ? `v${L.revision}` : "未记录";
+  $("#f-local").textContent = L.has_baseline ? `v${L.revision}` : "—";
+  $("#f-server").textContent = S ? `v${S.server_revision}` : "—";
+  $("#s-local").className = "value";
+  $("#s-local-sub").textContent = L.has_baseline ? `更新于 ${when(L.updated_at)}` : "还没有运行过";
+  $("#s-dir").textContent = L.data_dir;
+  $("#s-dir").title = L.data_dir;
+
+  if (S) {
+    $("#s-server").textContent = `v${S.server_revision}`;
+    $("#s-server-sub").textContent = `检查于 ${new Date().toTimeString().slice(0, 5)}`;
+    const behind = L.has_baseline && S.server_revision > L.revision;
+    if (S.pending && (S.pending.bundles || S.pending.files)) {
+      $("#s-pending").textContent = size(S.pending.bytes);
+      $("#s-pending").className = "value hot";
+      $("#s-pending-sub").textContent = `${S.pending.bundles} 个 Asset / ${S.pending.files} 个 Resource`;
+    } else if (!L.has_baseline) {
+      $("#s-pending").textContent = "—";
+      $("#s-pending").className = "value";
+      $("#s-pending-sub").textContent = "先选择首次下载方式";
+    } else if (behind) {
+      $("#s-pending").textContent = "0 B";
+      $("#s-pending").className = "value";
+      $("#s-pending-sub").textContent = `有新版本，但没有要下载的文件`;
+    } else {
+      $("#s-pending").textContent = "已是最新";
+      $("#s-pending").className = "value good";
+      $("#s-pending-sub").textContent = "没有新内容";
+    }
+  } else if (state.serverError) {
+    $("#s-server").textContent = "?";
+    $("#s-server-sub").textContent = "无法获取";
+    $("#s-pending").textContent = "?";
+    $("#s-pending").className = "value";
+    $("#s-pending-sub").textContent = "";
+  }
+
+  const sb = $("#server-banner");
+  if (state.serverError) {
+    sb.hidden = false;
+    sb.innerHTML = "";
+    const b = document.createElement("b");
+    b.textContent = state.serverError.message;
+    sb.append(b, state.serverError.hint || "");
+  } else sb.hidden = true;
+
+  const vb = $("#version-banner");
+  if (L.app_version_changed) {
+    vb.hidden = false;
+    vb.innerHTML = "";
+    const b = document.createElement("b");
+    b.textContent = `app_version 从 ${L.state_app_version} 变成了 ${L.app_version}`;
+    vb.append(b, "旧的版本号不再适用。直接点「检查并下载更新」会按全量清单处理（60 GB 以上），通常更想要的是「其他操作 → 重新下载最新一个版本」。");
+  } else vb.hidden = true;
+
+  $("#first-run").hidden = L.has_baseline;
+  $("#main-actions").hidden = !L.has_baseline;
+  $("#main-more").hidden = !L.has_baseline;
+
+  const title = $("#update-title"), hint = $("#action-hint");
+  if (S && S.pending && (S.pending.bundles || S.pending.files)) {
+    title.textContent = `v${L.revision} → v${S.server_revision}`;
+    hint.textContent = `${S.pending.bundles} 个 Asset / ${S.pending.files} 个 Resource，共 ${size(S.pending.bytes)}`;
+  } else if (S && L.has_baseline && !L.app_version_changed && S.server_revision <= L.revision) {
+    title.textContent = "已经是最新版本";
+    hint.textContent = `本地和服务器都是 v${L.revision}`;
+  } else if (S && L.has_baseline && S.server_revision > L.revision) {
+    title.textContent = `v${L.revision} → v${S.server_revision}`;
+    hint.textContent = "有新版本，但没有要下载的文件";
+  } else {
+    title.textContent = "检查更新";
+    hint.textContent = state.serverError ? "暂时连不上服务器" : "正在询问服务器…";
+  }
+
+  const list = $("#history");
+  list.innerHTML = "";
+  for (const h of L.history || []) {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="rev"></span><span class="note"></span><span class="when"></span>`;
+    li.children[0].textContent = `v${h.revision}`;
+    li.children[1].textContent = NOTE_LABEL[h.note] || h.note;
+    li.children[2].textContent = when(h.at);
+    list.append(li);
+  }
+  $("#history-card").hidden = !(L.history && L.history.length);
+  setBusy(!!state.job);
+}
+
+function setBusy(busy) {
+  $$("[data-run]").forEach(b => b.disabled = busy);
+  $("#btn-update").textContent = busy ? "正在运行…" : "检查并下载更新";
+}
+
+$("#btn-refresh").addEventListener("click", () => { refreshLocal(); refreshServer(); });
+
+// ---------------------------------------------------------------- run
+document.addEventListener("click", async ev => {
+  const btn = ev.target.closest("[data-run]");
+  if (!btn || btn.disabled) return;
+  $$("details.more").forEach(d => d.open = false);
+  const mode = btn.dataset.run;
+  if (btn.dataset.confirm === "full" || (mode === "update" && state.local && state.local.app_version_changed)) {
+    const ok = await confirmBox("下载整个游戏资源？", "需要 60 GB 以上的空间和很长时间。中途可以取消，下次会从断点继续。", "开始下载");
+    if (!ok) return;
+  }
+  try {
+    await api("/api/run", { mode, force: !!btn.dataset.force });
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
+$("#btn-cancel").addEventListener("click", async () => {
+  if (!await confirmBox("取消当前任务？", "已经下载完整的文件会保留，下次运行从断点继续。", "取消任务")) return;
+  $("#btn-cancel").disabled = true;
+  $("#btn-cancel").textContent = "正在取消…";
+  try { await api("/api/cancel", {}); } catch (err) { toast(err.message); }
+});
+
+document.addEventListener("click", async ev => {
+  const btn = ev.target.closest("[data-open]");
+  if (!btn) return;
+  try { await api("/api/open", { target: btn.dataset.open }); } catch (err) { toast(err.message); }
+});
+
+// ---------------------------------------------------------------- job view
+const job = { steps: [], samples: [], progress: null, startedAt: 0 };
+
+function renderJob() {
+  const running = !!state.job;
+  renderTask(state.job, job.progress);
+  $("#job-card").hidden = !running;
+  setBusy(running);
+  if (!running) { document.title = "gkmas-delta 控制台"; return; }
+  $("#job-title").textContent = MODE_LABEL[state.job.mode] + (state.job.force ? "（重新处理）" : "");
+  $("#btn-cancel").disabled = false;
+  $("#btn-cancel").textContent = "取消";
+  renderSteps();
+  renderProgress();
+}
+
+function renderSteps() {
+  const box = $("#job-steps");
+  box.innerHTML = "";
+  const current = job.steps[job.steps.length - 1];
+  for (const name of STAGES) {
+    if (!job.steps.includes(name) && name === "完成") continue;
+    const s = document.createElement("span");
+    s.textContent = name;
+    if (name === current) s.className = "now";
+    else if (job.steps.includes(name)) s.className = "done";
+    box.append(s);
+  }
+  $("#job-step").textContent = current || "准备中";
+}
+
+function renderProgress() {
+  const p = job.progress;
+  const bar = $("#job-bar");
+  const stats = $("#job-stats");
+  if (!p || !p.total) {
+    bar.classList.add("indeterminate");
+    bar.firstElementChild.style.width = "";
+    $("#job-what").textContent = p ? p.text : "";
+    stats.textContent = "";
+    return;
+  }
+  bar.classList.remove("indeterminate");
+  const pct = Math.min(100, p.completed / p.total * 100);
+  bar.firstElementChild.style.width = pct.toFixed(1) + "%";
+  $("#job-what").textContent = p.text;
+
+  // Rate over the last few seconds, so a stall shows up quickly.
+  const now = performance.now();
+  job.samples.push([now, p.completed]);
+  while (job.samples.length > 2 && now - job.samples[0][0] > 4000) job.samples.shift();
+  const [t0, c0] = job.samples[0];
+  const rate = now - t0 > 500 ? (p.completed - c0) / ((now - t0) / 1000) : null;
+  const eta = rate > 0 ? (p.total - p.completed) / rate : null;
+
+  const parts = [`<b>${pct.toFixed(1)}%</b>`];
+  if (p.unit === "bytes") {
+    parts.push(`${size(p.completed)} / ${size(p.total)}`);
+    if (rate != null) parts.push(`${size(rate)}/s`);
+  } else {
+    parts.push(`${Math.round(p.completed)} / ${p.total}`);
+  }
+  if (eta != null) parts.push(`剩余约 ${duration(eta)}`);
+  stats.innerHTML = parts.map(x => `<span>${x}</span>`).join("");
+  document.title = `${pct.toFixed(0)}% · gkmas-delta`;
+}
+
+// ---------------------------------------------------------------- log
+const logEl = $("#log");
+const MAX_LINES = 3000;
+function logLine(ev) {
+  const empty = $(".empty", logEl);
+  if (empty) empty.remove();
+  const stick = logEl.scrollTop + logEl.clientHeight >= logEl.scrollHeight - 24;
+  const line = document.createElement("span");
+  line.className = "l " + (ev.kind === "step" ? "step" : ev.level || "");
+  if (ev.kind !== "step" && ev.level !== "detail") {
+    const t = document.createElement("span");
+    t.className = "t";
+    t.textContent = new Date(ev.time * 1000).toTimeString().slice(0, 8);
+    line.append(t);
+  }
+  const prefix = ev.level === "warn" ? "注意 " : ev.level === "error" ? "错误 " : "";
+  line.append(prefix + ev.text);
+  logEl.append(line);
+  while (logEl.childElementCount > MAX_LINES) logEl.firstElementChild.remove();
+  if (stick) logEl.scrollTop = logEl.scrollHeight;
+}
+$("#btn-clear-log").addEventListener("click", () => { logEl.innerHTML = '<span class="l empty">日志已清空。</span>'; });
+$("#btn-copy-log").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(logEl.innerText); toast("日志已复制"); }
+  catch { toast("复制失败，请手动选中复制"); }
+});
+
+// ---------------------------------------------------------------- events
+let replaying = true;
+function connect() {
+  const es = new EventSource("/api/events");
+  es.onopen = () => { $("#conn").classList.remove("off"); $("#conn span").textContent = "已连接"; };
+  es.onerror = () => { $("#conn").classList.add("off"); $("#conn span").textContent = "已断开（程序窗口是否关了？）"; };
+  es.onmessage = msg => {
+    const ev = JSON.parse(msg.data);
+    if (ev.kind === "log" || ev.kind === "step") logLine(ev);
+    if (ev.kind === "step") {
+      job.steps.push(ev.text);
+      job.progress = null;
+      job.samples = [];
+      if (state.job) renderSteps(), renderProgress();
+    } else if (ev.kind === "tool") {
+      onToolProgress(ev);
+    } else if (ev.kind === "progress") {
+      if (state.job && state.job.mode === "convert") renderTask(state.job, ev);
+      // The text carries a live file count, so only a new total or a counter
+      // going backwards means a different bar.
+      if (job.progress && (job.progress.total !== ev.total || ev.completed < job.progress.completed)) job.samples = [];
+      job.progress = ev;
+      if (state.job) renderProgress();
+    } else if (ev.kind === "job") {
+      if (ev.state === "running") {
+        state.job = ev;
+        job.steps = []; job.progress = null; job.samples = [];
+        renderJob();
+        renderTask(ev, null);
+      } else {
+        state.job = null;
+        renderJob();
+        // Replayed history also carries finished jobs; only announce live ones.
+        if (Date.now() / 1000 - ev.time < 5) toast(`${MODE_LABEL[ev.mode]}：${RESULT_LABEL[ev.result] || ev.result}`);
+        refreshLocal().then(refreshServer);
+        galleryStale = true;
+        aud.loaded = false;
+        st.loaded = false;
+        vid.loaded = false;
+        renderTask(null);
+        if (!$("#tab-audio").hidden) loadAudio();
+        if (!$("#tab-video").hidden) loadVideos();
+        refreshConverted();
+      }
+    }
+  };
+}
+
+// ---------------------------------------------------------------- gallery
+const gal = { revisions: [], revision: 0, source: "png", q: "", offset: 0, total: 0, items: [], loading: false };
+let galleryStale = true;
+
+async function loadGallery() {
+  if (!galleryStale) return;
+  galleryStale = false;
+  const data = await api("/api/gallery");
+  gal.revisions = data.revisions;
+  const sel = $("#g-rev");
+  sel.innerHTML = "";
+  for (const r of gal.revisions) {
+    const o = document.createElement("option");
+    o.value = r.revision;
+    o.textContent = `v${r.revision}`;
+    sel.append(o);
+  }
+  if (!gal.revisions.length) {
+    $("#g-grid").innerHTML = "";
+    $("#g-count").textContent = "";
+    $("#g-grid").append(Object.assign(document.createElement("div"), {
+      className: "empty-state", style: "grid-column:1/-1",
+      textContent: "还没有抽出任何图片。去「控制台」运行一次更新就会出现在这里。",
+    }));
+    $("#g-more").hidden = true;
+    return;
+  }
+  if (!gal.revisions.some(r => r.revision === gal.revision)) gal.revision = gal.revisions[0].revision;
+  sel.value = gal.revision;
+  syncSource();
+  await queryImages(true);
+}
+
+function syncSource() {
+  const rev = gal.revisions.find(r => r.revision === gal.revision);
+  const has = rev ? rev.sources : [];
+  if (!has.includes(gal.source)) gal.source = has[0] || "png";
+  $$("#g-source button").forEach(b => {
+    b.disabled = !has.includes(b.dataset.source);
+    b.setAttribute("aria-pressed", b.dataset.source === gal.source);
+  });
+}
+
+async function queryImages(reset) {
+  if (gal.loading) return;
+  gal.loading = true;
+  if (reset) { gal.offset = 0; gal.items = []; $("#g-grid").innerHTML = ""; }
+  try {
+    const params = new URLSearchParams({ revision: gal.revision, source: gal.source, q: gal.q, offset: gal.offset });
+    const data = await api("/api/images?" + params);
+    gal.total = data.total;
+    const start = gal.items.length;
+    gal.items.push(...data.items);
+    gal.offset = gal.items.length;
+    const frag = document.createDocumentFragment();
+    data.items.forEach((it, i) => {
+      const tile = document.createElement("button");
+      tile.className = "tile";
+      tile.title = it.path;
+      tile.innerHTML = `<div class="img"><img loading="lazy" alt=""></div><div class="cap"></div>`;
+      $("img", tile).src = "/data/" + it.path.split("/").map(encodeURIComponent).join("/");
+      $(".cap", tile).textContent = it.name;
+      tile.addEventListener("click", () => openViewer(start + i));
+      frag.append(tile);
+    });
+    $("#g-grid").append(frag);
+    $("#g-count").textContent = gal.total
+      ? `v${gal.revision} · 共 ${gal.total} 张${gal.q ? `（筛选：${gal.q}）` : ""}，已显示 ${gal.items.length}`
+      : "没有匹配的图片。";
+    $("#g-more").hidden = gal.items.length >= gal.total;
+  } catch (err) {
+    toast(err.message);
+  } finally {
+    gal.loading = false;
+  }
+}
+
+$("#g-rev").addEventListener("change", e => { gal.revision = Number(e.target.value); syncSource(); queryImages(true); });
+$$("#g-source button").forEach(b => b.addEventListener("click", () => {
+  if (b.disabled) return;
+  gal.source = b.dataset.source; syncSource(); queryImages(true);
+}));
+let qTimer;
+$("#g-q").addEventListener("input", e => {
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => { gal.q = e.target.value.trim(); queryImages(true); }, 300);
+});
+$("#g-more").addEventListener("click", () => queryImages(false));
+$("#g-open").addEventListener("click", async () => {
+  try { await api("/api/open", { target: "images", revision: gal.revision, source: gal.source }); }
+  catch (err) { toast(err.message); }
+});
+
+let viewIndex = 0;
+function openViewer(i) {
+  viewIndex = Math.max(0, Math.min(i, gal.items.length - 1));
+  const it = gal.items[viewIndex];
+  const url = "/data/" + it.path.split("/").map(encodeURIComponent).join("/");
+  const img = $("#v-img");
+  $("#v-size").textContent = "";
+  img.onload = () => { $("#v-size").textContent = `${img.naturalWidth} × ${img.naturalHeight}`; };
+  img.src = url;
+  $("#v-name").textContent = it.group && it.group !== "." ? `${it.group}/${it.name}` : it.name;
+  $("#v-raw").href = url;
+  $("#v-prev").disabled = viewIndex === 0;
+  $("#v-next").disabled = viewIndex >= gal.items.length - 1;
+  const dlg = $("#viewer");
+  if (!dlg.open) dlg.showModal();
+}
+$("#v-prev").addEventListener("click", () => openViewer(viewIndex - 1));
+$("#v-next").addEventListener("click", () => openViewer(viewIndex + 1));
+$("#v-close").addEventListener("click", () => $("#viewer").close());
+$("#v-reveal").addEventListener("click", () => reveal(gal.items[viewIndex].path));
+$("#viewer").addEventListener("click", e => { if (e.target.id === "viewer") $("#viewer").close(); });
+document.addEventListener("keydown", e => {
+  if (!$("#viewer").open) return;
+  if (e.key === "ArrowLeft") openViewer(viewIndex - 1);
+  if (e.key === "ArrowRight") openViewer(viewIndex + 1);
+});
+
+// ---------------------------------------------------------------- media helpers
+const dataUrl = path => "/data/" + path.split("/").map(encodeURIComponent).join("/");
+const escapeHtml = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const byName = (a, b) => a[1].localeCompare(b[1], "ja");
+function fillSelect(sel, entries, first) {
+  const keep = sel.value;
+  sel.innerHTML = "";
+  sel.append(new Option(first, ""));
+  for (const [value, label] of entries) sel.append(new Option(label, value));
+  sel.value = entries.some(([v]) => v === keep) ? keep : "";
+}
+async function reveal(path) {
+  try { await api("/api/reveal", { path }); } catch (err) { toast(err.message); }
+}
+function setBusyNote(text) {
+  const el = $("#busy");
+  el.hidden = !text;
+  $("#busy-text").textContent = text || "";
+}
+
+// Run fn; if the server says a tool is missing, offer to download it and retry once.
+let toolDownload = null;
+async function withTool(fn) {
+  try {
+    return await fn();
+  } catch (err) {
+    if (!err.tool) throw err;
+    const t = err.tool;
+    const ok = await confirmBox(`下载 ${t.label}？`, `第一次使用需要下载，约 ${t.size_mb} MB，之后会一直保存在程序目录的 bin 文件夹里。`, "下载");
+    if (!ok) throw Object.assign(new Error("已取消下载。"), { quiet: true });
+    toolDownload = t;
+    setBusyNote(`正在下载 ${t.label}…`);
+    try { await api("/api/tools/install", { name: t.name }); }
+    finally { toolDownload = null; setBusyNote(""); }
+    return await fn();
+  }
+}
+function onToolProgress(ev) {
+  if (!toolDownload || ev.name !== toolDownload.name || !ev.total) return;
+  setBusyNote(`正在下载 ${toolDownload.label}… ${size(ev.completed)} / ${size(ev.total)}`);
+}
+const report = err => { if (!err.quiet) toast(err.message + (err.hint ? " " + err.hint : "")); };
+
+// ---------------------------------------------------------------- player
+// A queue item: { title, subtitle, jacket, path } or { ..., resolve: async () => path }.
+const player = { queue: [], index: -1, item: null, onChange: null };
+
+async function playAt(i) {
+  const item = player.queue[i];
+  if (!item) return;
+  player.index = i;
+  player.item = item;
+  $("#p-title").textContent = item.title;
+  $("#p-sub").textContent = item.subtitle || "";
+  const cover = coverEl(item.jacket, "cover");
+  cover.id = "p-cover";
+  $("#p-cover").replaceWith(cover);
+  $("#p-prev").disabled = i === 0;
+  $("#p-next").disabled = i >= player.queue.length - 1;
+  $("#player").hidden = false;
+  document.body.classList.add("has-player");
+  if (player.onChange) player.onChange(item);
+  try {
+    if (!item.path) item.path = await withTool(item.resolve);
+  } catch (err) { report(err); return; }
+  if (player.item !== item) return; // skipped while decoding
+  const audio = $("#p-audio");
+  audio.src = dataUrl(item.path);
+  audio.play().catch(() => {});
+}
+
+function playQueue(queue, i, onChange = null) {
+  player.queue = queue;
+  player.onChange = onChange;
+  playAt(i);
+}
+
+function stopPlayer() {
+  const audio = $("#p-audio");
+  audio.pause();
+  audio.removeAttribute("src");
+  audio.load();
+  $("#player").hidden = true;
+  document.body.classList.remove("has-player");
+  if (player.onChange) player.onChange(null);
+  Object.assign(player, { queue: [], index: -1, item: null, onChange: null });
+}
+
+$("#p-prev").addEventListener("click", () => playAt(player.index - 1));
+$("#p-next").addEventListener("click", () => playAt(player.index + 1));
+$("#p-audio").addEventListener("ended", () => playAt(player.index + 1));
+$("#p-reveal").addEventListener("click", () => player.item && player.item.path && reveal(player.item.path));
+$("#p-close").addEventListener("click", stopPlayer);
+
+function coverEl(jacket, cls) {
+  const box = document.createElement("div");
+  box.className = cls;
+  if (jacket) {
+    const img = new Image();
+    img.loading = "lazy";
+    img.alt = "";
+    img.src = dataUrl(jacket);
+    box.append(img);
+  } else box.innerHTML = icon("wave");
+  return box;
+}
+
+// ---------------------------------------------------------------- selection
+// Shared by the audio grid and the video list: drag a box to select, Ctrl/Cmd
+// to toggle, Shift for a range, or the checkbox on each item. While something
+// is selected a plain click toggles too, so a selection is never lost by a
+// stray click.
+function makeSelectable({ list, itemSelector, onChange }) {
+  const sel = new Set();
+  let anchor = -1;
+  let drag = null;
+  let suppressClick = false;
+
+  const items = () => $$(itemSelector, list);
+  const indexOf = el => items().indexOf(el);
+  const paint = () => {
+    for (const el of items()) el.classList.toggle("selected", sel.has(el.dataset.key));
+    list.classList.toggle("selecting", sel.size > 0);
+    onChange(sel);
+  };
+  const setRange = (from, to, base) => {
+    const all = items();
+    sel.clear();
+    base.forEach(k => sel.add(k));
+    for (let i = Math.min(from, to); i <= Math.max(from, to); i++) if (all[i]) sel.add(all[i].dataset.key);
+  };
+
+  // Returns true when the click was a selection gesture and must not open the item.
+  function click(el, e) {
+    if (suppressClick) return true;
+    const key = el.dataset.key;
+    const i = indexOf(el);
+    if (e.shiftKey && anchor >= 0) {
+      setRange(anchor, i, e.ctrlKey || e.metaKey ? [...sel] : []);
+    } else if (e.ctrlKey || e.metaKey || sel.size || e.target.closest(".pick")) {
+      sel.has(key) ? sel.delete(key) : sel.add(key);
+      anchor = i;
+    } else {
+      return false;
+    }
+    paint();
+    return true;
+  }
+
+  list.addEventListener("pointerdown", e => {
+    if (e.pointerType !== "mouse" || e.button !== 0) return;
+    drag = { x: e.pageX, y: e.pageY, base: e.ctrlKey || e.metaKey || e.shiftKey ? [...sel] : [], box: null };
+  });
+  window.addEventListener("pointermove", e => {
+    if (!drag) return;
+    const dx = e.pageX - drag.x, dy = e.pageY - drag.y;
+    if (!drag.box) {
+      if (Math.hypot(dx, dy) < 6) return;
+      drag.box = document.body.appendChild(Object.assign(document.createElement("div"), { className: "marquee" }));
+      document.body.classList.add("dragging");
+    }
+    const left = Math.min(e.pageX, drag.x), top = Math.min(e.pageY, drag.y);
+    const width = Math.abs(dx), height = Math.abs(dy);
+    Object.assign(drag.box.style, { left: left + "px", top: top + "px", width: width + "px", height: height + "px" });
+    sel.clear();
+    drag.base.forEach(k => sel.add(k));
+    for (const el of items()) {
+      const r = el.getBoundingClientRect();
+      const x = r.left + scrollX, y = r.top + scrollY;
+      if (x < left + width && x + r.width > left && y < top + height && y + r.height > top) sel.add(el.dataset.key);
+    }
+    paint();
+    // Keep going past the window edge.
+    if (e.clientY < 60) scrollBy(0, -24);
+    else if (e.clientY > innerHeight - 60) scrollBy(0, 24);
+  });
+  window.addEventListener("pointerup", () => {
+    if (!drag) return;
+    if (drag.box) {
+      drag.box.remove();
+      document.body.classList.remove("dragging");
+      suppressClick = true;
+      setTimeout(() => { suppressClick = false; }, 0);
+    }
+    drag = null;
+  });
+
+  return {
+    sel,
+    click,
+    paint,
+    has: key => sel.has(key),
+    set(keys) { sel.clear(); keys.forEach(k => sel.add(k)); anchor = -1; paint(); },
+    clear() { sel.clear(); anchor = -1; paint(); },
+  };
+}
+
+function checkboxEl() {
+  const box = document.createElement("span");
+  box.className = "pick";
+  box.title = "选择";
+  return box;
+}
+
+function versionOptions(sel, items, first = "全部版本") {
+  const revs = [...new Set(items.map(x => x.revision).filter(Boolean))].sort((a, b) => b - a);
+  fillSelect(sel, revs.map((r, i) => [String(r), i === 0 ? `v${r}（最新）` : `v${r}`]), first);
+}
+
+// Batch conversion and cleanup, shared by the audio and video tabs.
+async function convertSelected(kind, files) {
+  if (!files.length) { toast("选中的项目里没有需要转换的文件。"); return; }
+  try {
+    await withTool(() => api("/api/convert", { kind, files }));
+    (kind === "audio" ? audSel : vidSel).clear();
+    toast(`开始转换 ${files.length} 个文件，进度在右下角。`);
+  } catch (err) { report(err); }
+}
+
+async function cleanConverted(kind, files) {
+  const what = kind === "audio" ? "音频" : "视频";
+  const scope = files ? `所选 ${files.length} 项的` : "全部";
+  if (!await confirmBox(`删除${scope}转换后的${what}？`, "只删 AUDIO / VIDEO 文件夹里转换出来的文件，原始 Resource 不动，需要时可以重新转换。", "删除")) return;
+  try {
+    const data = await api("/api/clean", files ? { kind, files } : { kind });
+    toast(`已释放 ${size(data.freed)}`);
+    showConverted(data);
+    if (kind === "audio") { aud.loaded = false; loadAudio(); } else { vid.loaded = false; loadVideos(); }
+  } catch (err) { report(err); }
+}
+
+function showConverted(sizes) {
+  $("#a-conv-size").textContent = size(sizes.audio);
+  $("#v-conv-size").textContent = size(sizes.video);
+}
+async function refreshConverted() {
+  try { showConverted(await api("/api/converted")); } catch { /* shown next time */ }
+}
+
+// A small floating card for conversion jobs, visible from any tab.
+function renderTask(job, progress) {
+  const box = $("#task");
+  if (!job || job.mode !== "convert") { box.hidden = true; return; }
+  box.hidden = false;
+  $("#task-text").textContent = progress ? progress.text : "准备转换…";
+  const pct = progress && progress.total ? (progress.completed / progress.total) * 100 : 0;
+  $("#task-bar").style.width = pct.toFixed(1) + "%";
+}
+$("#task-cancel").addEventListener("click", async () => {
+  try { await api("/api/cancel", {}); } catch (err) { toast(err.message); }
+});
+
+// ---------------------------------------------------------------- audio
+const PAGE = 240;
+const aud = { tracks: [], kinds: {}, characters: {}, kind: "", char: "", ver: "", q: "", loaded: false, view: [], shown: PAGE };
+const audSel = makeSelectable({
+  list: $("#a-list"),
+  itemSelector: ".row",
+  onChange: sel => renderSelBar("a", sel, aud.tracks.filter(t => sel.has(t.path))),
+});
+
+async function loadAudio() {
+  if (aud.loaded) return;
+  try {
+    const data = await api("/api/audio");
+    Object.assign(aud, { tracks: data.tracks, kinds: data.kinds, characters: data.characters, loaded: true });
+  } catch (err) { toast(err.message); return; }
+  const seg = $("#a-kind");
+  seg.innerHTML = "";
+  const present = new Set(aud.tracks.map(t => t.kind));
+  for (const [kind, label] of [["", "全部"], ...Object.entries(aud.kinds).filter(([k]) => present.has(k))]) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.setAttribute("aria-pressed", kind === aud.kind);
+    b.addEventListener("click", () => {
+      aud.kind = kind;
+      aud.shown = PAGE;
+      $$("#a-kind button").forEach(x => x.setAttribute("aria-pressed", x === b));
+      renderAudio();
+    });
+    seg.append(b);
+  }
+  const chars = [...new Set(aud.tracks.map(t => t.character).filter(Boolean))];
+  fillSelect($("#a-char"), chars.map(c => [c, aud.characters[c] || c]).sort(byName), "全部角色");
+  versionOptions($("#a-ver"), aud.tracks);
+  aud.ver = $("#a-ver").value;
+  refreshConverted();
+  renderAudio();
+}
+
+function renderAudio() {
+  const q = aud.q.toLowerCase();
+  aud.view = aud.tracks.filter(t =>
+    (!aud.kind || t.kind === aud.kind) && (!aud.char || t.character === aud.char) &&
+    (!aud.ver || String(t.revision) === aud.ver) && (!q || t.file.toLowerCase().includes(q)));
+  const list = $("#a-list");
+  list.innerHTML = "";
+  const playing = player.item && player.item.source;
+  aud.view.slice(0, aud.shown).forEach((t, i) => {
+    const el = document.createElement("button");
+    el.className = "row" + (playing === t.path ? " playing" : "");
+    el.dataset.key = t.path;
+    el.title = t.file;
+    el.innerHTML = '<span></span><span class="thumb"></span><span class="name"></span><span class="c"></span><span class="c"></span><span class="num"></span><span class="state"></span>';
+    const cells = el.children;
+    cells[0].replaceWith(checkboxEl());
+    if (t.jacket) {
+      const img = new Image();
+      img.loading = "lazy";
+      img.alt = "";
+      img.src = dataUrl(t.jacket);
+      cells[1].append(img);
+    } else cells[1].innerHTML = icon("wave");
+    cells[2].textContent = t.title;
+    // Songs carry the singer in their subtitle; everything else its scene.
+    const music = t.kind === "music";
+    cells[3].textContent = music ? (t.subtitle.endsWith("伴奏") ? "歌曲 · 伴奏" : "歌曲") : t.subtitle;
+    cells[4].textContent = music ? t.subtitle.replace(/ · 伴奏$/, "") : aud.characters[t.character] || "";
+    cells[5].textContent = t.revision ? `v${t.revision}` : "";
+    cells[6].textContent = playing === t.path ? "播放中" : t.converted ? "已转换" : t.bank ? "" : "mp3";
+    if (!t.bank && playing !== t.path) cells[6].classList.add("plain");
+    el.addEventListener("click", e => { if (!audSel.click(el, e)) openTrack(i); });
+    list.append(el);
+  });
+  audSel.paint();
+  $("#a-more").hidden = aud.view.length <= aud.shown;
+  $("#a-count").textContent = aud.tracks.length
+    ? `${aud.view.length} 项` + (aud.view.length > aud.shown ? `，显示前 ${aud.shown} 项` : "") + " · 拖动框选，Ctrl 点选，Shift 连选"
+    : "还没有音频。下载 Resource 之后会出现在这里。";
+}
+
+async function openTrack(i) {
+  const t = aud.view[i];
+  if (!t.bank) {
+    // Plain files: the queue is whatever list is on screen.
+    const queue = aud.view.filter(x => !x.bank).map(x => ({ title: x.title, subtitle: x.subtitle, jacket: x.jacket, path: x.path, source: x.path }));
+    playQueue(queue, queue.findIndex(x => x.source === t.path), () => renderAudio());
+    return;
+  }
+  setBusyNote("正在解码…");
+  let cues;
+  try { cues = (await withTool(() => api("/api/decode", { file: t.file }))).cues; }
+  catch (err) { report(err); return; }
+  finally { setBusyNote(""); }
+  t.converted = true;
+  const queue = cues.map(c => ({ title: c.name.replace(/^sud_(vo|bgm|se|music)_[a-z]+_/, ""), subtitle: t.subtitle, path: c.path, source: t.path }));
+  if (queue.length === 1) { playQueue(queue, 0, () => renderAudio()); return; }
+  renderAudio();
+  openBank(t, queue);
+}
+
+function openBank(t, queue) {
+  const dlg = $("#bank");
+  $("#bank-title").textContent = t.title;
+  $("#bank-sub").textContent = `${t.subtitle} · ${queue.length} 条`;
+  const list = $("#bank-list");
+  list.innerHTML = "";
+  queue.forEach((item, i) => {
+    const b = document.createElement("button");
+    b.className = "cue";
+    b.textContent = item.title;
+    b.addEventListener("click", () => playQueue(queue, i, cur => {
+      $$("#bank-list .cue").forEach((x, j) => x.classList.toggle("playing", !!cur && player.queue === queue && j === player.index));
+      renderAudio();
+    }));
+    list.append(b);
+  });
+  $("#bank-reveal").onclick = () => reveal(queue[0].path);
+  dlg.showModal();
+}
+$("#bank-close").addEventListener("click", () => $("#bank").close());
+$("#bank").addEventListener("click", e => { if (e.target.id === "bank") $("#bank").close(); });
+
+$("#a-char").addEventListener("change", e => { aud.char = e.target.value; aud.shown = PAGE; renderAudio(); });
+$("#a-ver").addEventListener("change", e => { aud.ver = e.target.value; aud.shown = PAGE; renderAudio(); });
+$("#a-q").addEventListener("input", e => { aud.q = e.target.value.trim(); aud.shown = PAGE; renderAudio(); });
+$("#a-more").addEventListener("click", () => { aud.shown += PAGE; renderAudio(); });
+
+// Selection bar: the same markup for both tabs, prefixed a- / v-.
+function renderSelBar(prefix, sel, picked) {
+  const bar = $(`#${prefix}-selbar`);
+  // The selection bar takes the conversion row's place at the same height, so
+  // the list never shifts under a box that is still being dragged.
+  bar.hidden = sel.size === 0;
+  $(`#${prefix}-convbar`).hidden = sel.size > 0;
+  if (!sel.size) return;
+  const convertible = prefix === "a" ? picked.filter(t => t.bank) : picked;
+  const done = picked.filter(t => t.converted);
+  $(`#${prefix}-selcount`).textContent = `已选 ${sel.size} 项` +
+    (prefix === "a" && convertible.length < picked.length ? `（其中 ${convertible.length} 个需要转换，mp3 本来就能直接播放）` : "");
+  $(`#${prefix}-sel-convert`).disabled = !convertible.length;
+  $(`#${prefix}-sel-clean`).disabled = !done.length;
+}
+$("#a-sel-all").addEventListener("click", () => audSel.set(aud.view.map(t => t.path)));
+$("#a-sel-none").addEventListener("click", () => audSel.clear());
+$("#a-sel-convert").addEventListener("click", () =>
+  convertSelected("audio", aud.tracks.filter(t => audSel.has(t.path) && t.bank).map(t => t.file)));
+$("#a-sel-clean").addEventListener("click", () =>
+  cleanConverted("audio", aud.tracks.filter(t => audSel.has(t.path) && t.converted).map(t => t.file)));
+$("#a-clean-all").addEventListener("click", () => cleanConverted("audio", null));
+
+// ---------------------------------------------------------------- videos
+const vid = { videos: [], groups: {}, characters: {}, group: "", char: "", ver: "", q: "", loaded: false, view: [], shown: PAGE };
+const vidSel = makeSelectable({
+  list: $("#v-list"),
+  itemSelector: ".row",
+  onChange: sel => renderSelBar("v", sel, vid.videos.filter(v => sel.has(v.path))),
+});
+
+async function loadVideos() {
+  if (vid.loaded) return;
+  try {
+    const data = await api("/api/videos");
+    Object.assign(vid, { videos: data.videos, groups: data.groups, characters: data.characters, loaded: true });
+  } catch (err) { toast(err.message); return; }
+  const seg = $("#v-group");
+  seg.innerHTML = "";
+  const present = new Set(vid.videos.map(v => v.group));
+  for (const [group, label] of [["", "全部"], ...Object.entries(vid.groups).filter(([g]) => present.has(g))]) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.setAttribute("aria-pressed", group === vid.group);
+    b.addEventListener("click", () => {
+      vid.group = group;
+      vid.shown = PAGE;
+      $$("#v-group button").forEach(x => x.setAttribute("aria-pressed", x === b));
+      renderVideos();
+    });
+    seg.append(b);
+  }
+  const chars = [...new Set(vid.videos.map(v => v.character).filter(Boolean))];
+  fillSelect($("#v-char"), chars.map(c => [c, vid.characters[c] || c]).sort(byName), "全部角色");
+  versionOptions($("#v-ver"), vid.videos);
+  vid.ver = $("#v-ver").value;
+  refreshConverted();
+  renderVideos();
+}
+
+function renderVideos() {
+  const q = vid.q.toLowerCase();
+  vid.view = vid.videos.filter(v =>
+    (!vid.group || v.group === vid.group) && (!vid.char || v.character === vid.char) &&
+    (!vid.ver || String(v.revision) === vid.ver) && (!q || v.file.toLowerCase().includes(q)));
+  const list = $("#v-list");
+  list.innerHTML = "";
+  for (const v of vid.view.slice(0, vid.shown)) {
+    const el = document.createElement("button");
+    el.className = "row";
+    el.dataset.key = v.path;
+    el.title = v.file;
+    el.innerHTML = '<span></span><span class="thumb"></span><span class="name"></span><span class="c"></span><span class="c"></span><span class="num"></span><span class="num"></span>';
+    const cells = el.children;
+    cells[0].replaceWith(checkboxEl());
+    cells[1].innerHTML = icon(v.converted ? "play" : "film");
+    if (v.converted) cells[1].title = "已转换";
+    cells[2].textContent = v.title;
+    cells[3].textContent = vid.groups[v.group] || "";
+    cells[4].textContent = vid.characters[v.character] || "";
+    cells[5].textContent = v.revision ? `v${v.revision}` : "";
+    cells[6].textContent = size(v.size);
+    el.addEventListener("click", e => { if (!vidSel.click(el, e)) openVideo(v); });
+    list.append(el);
+  }
+  vidSel.paint();
+  $("#v-more").hidden = vid.view.length <= vid.shown;
+  $("#v-count").textContent = vid.videos.length
+    ? `${vid.view.length} 个视频 · 已转换的显示为播放图标 · 拖动框选，Ctrl 点选，Shift 连选`
+    : "还没有视频。下载 Resource 之后会出现在这里。";
+}
+
+async function openVideo(v) {
+  $("#p-audio").pause();
+  const big = v.size > 200 * 1048576;
+  setBusyNote(v.converted ? "正在打开…" : `正在转换 ${v.title}…` + (big ? "（文件很大，可能要一两分钟）" : ""));
+  let path;
+  try { path = (await withTool(() => api("/api/video", { file: v.file }))).path; }
+  catch (err) { report(err); return; }
+  finally { setBusyNote(""); }
+  if (!v.converted) { v.converted = true; renderVideos(); refreshConverted(); }
+  const dlg = $("#video");
+  $("#vd-title").textContent = v.title;
+  const video = $("#vd-player");
+  video.src = dataUrl(path);
+  $("#vd-reveal").onclick = () => reveal(path);
+  $("#vd-source").onclick = () => reveal(v.path);
+  dlg.showModal();
+  video.play().catch(() => {});
+}
+function closeVideo() {
+  const video = $("#vd-player");
+  video.pause();
+  video.removeAttribute("src");
+  video.load();
+  $("#video").close();
+}
+$("#vd-close").addEventListener("click", closeVideo);
+$("#video").addEventListener("click", e => { if (e.target.id === "video") closeVideo(); });
+$("#video").addEventListener("cancel", e => { e.preventDefault(); closeVideo(); });
+$("#v-char").addEventListener("change", e => { vid.char = e.target.value; vid.shown = PAGE; renderVideos(); });
+$("#v-ver").addEventListener("change", e => { vid.ver = e.target.value; vid.shown = PAGE; renderVideos(); });
+$("#v-q").addEventListener("input", e => { vid.q = e.target.value.trim(); vid.shown = PAGE; renderVideos(); });
+$("#v-more").addEventListener("click", () => { vid.shown += PAGE; renderVideos(); });
+
+$("#v-sel-all").addEventListener("click", () => vidSel.set(vid.view.map(v => v.path)));
+$("#v-sel-none").addEventListener("click", () => vidSel.clear());
+$("#v-sel-convert").addEventListener("click", () =>
+  convertSelected("video", vid.videos.filter(v => vidSel.has(v.path)).map(v => v.file)));
+$("#v-sel-clean").addEventListener("click", () =>
+  cleanConverted("video", vid.videos.filter(v => vidSel.has(v.path) && v.converted).map(v => v.file)));
+$("#v-clean-all").addEventListener("click", () => cleanConverted("video", null));
+
+// Esc clears whichever selection is on screen.
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || document.querySelector("dialog[open]")) return;
+  if (!$("#tab-audio").hidden) audSel.clear();
+  if (!$("#tab-video").hidden) vidSel.clear();
+});
+
+// ---------------------------------------------------------------- stories
+const st = { stories: [], categories: {}, characters: {}, base: "", loaded: false, cat: "", char: "", ver: "", q: "", hits: null, hitQuery: "", current: null, part: 0 };
+
+async function loadStories() {
+  if (st.loaded) return;
+  try {
+    const data = await api("/api/stories");
+    Object.assign(st, { stories: data.stories, categories: data.categories, characters: data.characters, base: data.base, loaded: true });
+  } catch (err) { toast(err.message); return; }
+  const cats = [...new Set(st.stories.map(s => s.category))];
+  fillSelect($("#st-cat"), cats.map(c => [c, st.categories[c] || c]).sort(byName), "全部分类");
+  const chars = [...new Set(st.stories.map(s => s.character).filter(Boolean))];
+  fillSelect($("#st-char"), chars.map(c => [c, st.characters[c] || c]).sort(byName), "全部角色");
+  versionOptions($("#st-ver"), st.stories);
+  st.ver = $("#st-ver").value;
+  renderStoryList();
+}
+
+const storyTitle = s => s.id.replace(/^adv_/, "");
+const storyLabel = s => [st.categories[s.category] || s.category, st.characters[s.character]].filter(Boolean).join(" · ");
+const speakerName = name => (name === "{user}" ? "P" : name);
+
+function renderStoryList() {
+  const q = st.q.toLowerCase();
+  const byId = new Map(st.stories.map(s => [s.id, s]));
+  let rows = st.hits
+    ? st.hits.map(hit => ({ s: byId.get(hit.id), hit })).filter(r => r.s)
+    : st.stories.filter(s => !q || s.id.toLowerCase().includes(q) || (st.characters[s.character] || "").includes(st.q)).map(s => ({ s }));
+  rows = rows.filter(({ s }) => (!st.cat || s.category === st.cat) && (!st.char || s.character === st.char) &&
+    (!st.ver || String(s.revision) === st.ver));
+
+  const list = $("#st-list");
+  list.innerHTML = "";
+  for (const { s, hit } of rows) {
+    const el = document.createElement("button");
+    el.className = "story-item" + (st.current && st.current.id === s.id ? " active" : "");
+    el.innerHTML = "<b></b><span></span>";
+    $("b", el).textContent = storyTitle(s);
+    $("span", el).textContent = `${storyLabel(s)} · ${s.parts.length} 话` + (s.revision ? ` · v${s.revision}` : "") + (hit ? ` · ${hit.count} 处` : "");
+    if (hit && hit.samples[0]) {
+      const sample = hit.samples[0];
+      const quote = document.createElement("q");
+      const who = sample.name ? speakerName(sample.name) + "：" : "";
+      quote.lang = "ja";
+      quote.textContent = who + sample.text.replace(/<[^>]*>/g, "").replace(/\n/g, " ");
+      el.append(quote);
+    }
+    el.addEventListener("click", () => {
+      const partIndex = hit ? Math.max(0, s.parts.findIndex(p => p.file === hit.samples[0].file)) : 0;
+      openStory(s, partIndex, hit ? st.hitQuery : "");
+    });
+    list.append(el);
+  }
+  $("#st-count").textContent = st.hits
+    ? `台词里含「${st.hitQuery}」的剧情 ${rows.length} 个，清空搜索框回到列表`
+    : `${rows.length} 个剧情`;
+}
+
+function renderLineText(text) {
+  let html = escapeHtml(text.replaceAll("{user}", "P"));
+  // <r\=reading>base</r> is ruby, <em\=>...</em> emphasis; drop any other tag.
+  html = html.replace(/&lt;r\\=(.*?)&gt;(.*?)&lt;\/r&gt;/g, "<ruby>$2<rt>$1</rt></ruby>");
+  html = html.replace(/&lt;em\\=.*?&gt;(.*?)&lt;\/em&gt;/g, "<em>$1</em>");
+  return html.replace(/&lt;\/?[a-z]+(\\=.*?)?&gt;/g, "");
+}
+
+// Highlight inside text nodes only, so a query can never cut through markup.
+function highlight(root, query) {
+  if (!query) return false;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) if (walker.currentNode.data.includes(query)) nodes.push(walker.currentNode);
+  for (const node of nodes) {
+    const frag = document.createDocumentFragment();
+    node.data.split(query).forEach((piece, i) => {
+      if (i) frag.append(Object.assign(document.createElement("mark"), { textContent: query }));
+      frag.append(piece);
+    });
+    node.replaceWith(frag);
+  }
+  return nodes.length > 0;
+}
+
+async function openStory(s, partIndex = 0, mark = "") {
+  st.current = s;
+  st.part = partIndex;
+  $("#s-layout").classList.add("reading");
+  renderStoryList();
+
+  const reader = $("#st-reader");
+  reader.innerHTML = `
+    <div class="card-head reader-head">
+      <button class="btn link back">← 列表</button>
+      <h2></h2><span class="label"></span><span class="spacer"></span><div class="parts"></div>
+      <div class="type-ctl" lang="zh-CN">
+        <button class="small" data-size="-1" title="字小一点">A</button>
+        <span class="size"></span>
+        <button class="big" data-size="1" title="字大一点">A</button>
+        <button class="face" title="切换衬线 / 无衬线"></button>
+      </div>
+      <button class="btn play-all" hidden data-icon="play">连续播放语音</button>
+      <button class="btn link icon reveal" title="在文件夹中显示" data-icon="folder"></button>
+    </div>
+    <div class="script"><div class="reader-empty">加载中…</div></div>`;
+  fillIcons(reader);
+  bindTypeControls(reader);
+  $("h2", reader).textContent = storyTitle(s);
+  $(".label", reader).textContent = storyLabel(s);
+  $(".back", reader).addEventListener("click", () => $("#s-layout").classList.remove("reading"));
+  $(".reveal", reader).addEventListener("click", () => reveal(`${st.base}/${s.parts[st.part].file}`));
+  if (s.parts.length > 1) {
+    for (const [i, p] of s.parts.entries()) {
+      const b = document.createElement("button");
+      b.textContent = p.part || String(i + 1);
+      b.setAttribute("aria-pressed", i === partIndex);
+      b.addEventListener("click", () => openStory(s, i, mark));
+      $(".parts", reader).append(b);
+    }
+  }
+
+  const script = $(".script", reader);
+  applyType(reader);
+  let data;
+  try {
+    data = await api("/api/story?file=" + encodeURIComponent(s.parts[partIndex].file));
+  } catch (err) {
+    $(".reader-empty", script).textContent = err.message;
+    return;
+  }
+  // A newer click may have replaced this story while it loaded.
+  if (st.current !== s || st.part !== partIndex) return;
+
+  script.innerHTML = "";
+  if (!data.lines.length) script.innerHTML = '<div class="reader-empty">这一话没有台词，可能是纯演出。</div>';
+  const voiceQueue = [];
+  let firstMark = null;
+  for (const line of data.lines) {
+    const el = document.createElement("div");
+    if (line.type === "message") {
+      el.className = "line";
+      el.innerHTML = `<div class="who${line.name === "{user}" ? " p" : ""}"></div><div class="say">${renderLineText(line.text)}</div>`;
+      $(".who", el).textContent = speakerName(line.name);
+      if (line.voices && line.voices.length) {
+        const start = voiceQueue.length;
+        for (const cue of line.voices) {
+          voiceQueue.push({
+            title: speakerName(line.name) || "语音",
+            subtitle: storyTitle(s),
+            line: el,
+            resolve: async () => (await api("/api/voice", { cue })).path,
+          });
+        }
+        const btn = document.createElement("button");
+        btn.className = "say-btn";
+        btn.title = "播放语音（会接着往下播）";
+        btn.innerHTML = icon("play");
+        btn.addEventListener("click", () => playQueue(voiceQueue, start, markSpeaking));
+        $(".who", el).append(btn);
+      }
+    } else if (line.type === "narration") {
+      el.className = "narr";
+      el.innerHTML = renderLineText(line.text);
+    } else if (line.type === "choice") {
+      el.className = "choice";
+      el.innerHTML = line.choices.map(c => `<span>${renderLineText(c)}</span>`).join("");
+    }
+    script.append(el);
+    if (highlight(el, mark) && !firstMark) firstMark = el;
+  }
+  if (voiceQueue.length) {
+    const all = $(".play-all", reader);
+    all.hidden = false;
+    all.addEventListener("click", () => playQueue(voiceQueue, 0, markSpeaking));
+  }
+  (firstMark || reader).scrollIntoView({ block: firstMark ? "center" : "start" });
+}
+
+// Reading size and face, remembered across visits.
+const TYPE_KEY = "gkmas-delta.story-type";
+const TYPE_MIN = 12, TYPE_MAX = 28;
+const type = (() => {
+  try { return { size: 16, serif: true, ...JSON.parse(localStorage.getItem(TYPE_KEY) || "{}") }; }
+  catch { return { size: 16, serif: true }; }
+})();
+
+function applyType(reader) {
+  const script = $(".script", reader);
+  if (script) {
+    script.style.setProperty("--size", type.size + "px");
+    script.classList.toggle("sans", !type.serif);
+  }
+  $(".type-ctl .size", reader).textContent = type.size;
+  $(".type-ctl .face", reader).textContent = type.serif ? "衬线" : "无衬线";
+  $('.type-ctl [data-size="-1"]', reader).disabled = type.size <= TYPE_MIN;
+  $('.type-ctl [data-size="1"]', reader).disabled = type.size >= TYPE_MAX;
+  try { localStorage.setItem(TYPE_KEY, JSON.stringify(type)); } catch { /* storage unavailable */ }
+}
+
+function bindTypeControls(reader) {
+  for (const b of $$(".type-ctl [data-size]", reader)) {
+    b.addEventListener("click", () => {
+      type.size = Math.min(TYPE_MAX, Math.max(TYPE_MIN, type.size + Number(b.dataset.size)));
+      applyType(reader);
+    });
+  }
+  $(".type-ctl .face", reader).addEventListener("click", () => { type.serif = !type.serif; applyType(reader); });
+}
+
+function markSpeaking(item) {
+  $$(".script .line.speaking").forEach(x => x.classList.remove("speaking"));
+  if (item && item.line && item.line.isConnected) {
+    item.line.classList.add("speaking");
+    item.line.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+}
+
+async function searchStories() {
+  const q = $("#st-q").value.trim();
+  if (!q) { st.hits = null; renderStoryList(); return; }
+  $("#st-count").textContent = "搜索中…";
+  try {
+    const data = await api("/api/story-search?q=" + encodeURIComponent(q));
+    st.hits = data.results;
+    st.hitQuery = q;
+    renderStoryList();
+  } catch (err) { toast(err.message); }
+}
+
+$("#st-cat").addEventListener("change", e => { st.cat = e.target.value; renderStoryList(); });
+$("#st-char").addEventListener("change", e => { st.char = e.target.value; renderStoryList(); });
+$("#st-ver").addEventListener("change", e => { st.ver = e.target.value; renderStoryList(); });
+$("#st-q").addEventListener("input", e => {
+  st.q = e.target.value.trim();
+  if (!st.q) st.hits = null;
+  if (!st.hits) renderStoryList();
+});
+$("#st-q").addEventListener("keydown", e => { if (e.key === "Enter") searchStories(); });
+$("#st-search").addEventListener("click", searchStories);
+
+
+// ---------------------------------------------------------------- settings
+let savedConfig = null;
+const cfgInputs = () => $$("#cfg [data-key]");
+
+async function loadConfig() {
+  const data = await api("/api/config");
+  savedConfig = data.values;
+  fillConfig(savedConfig);
+  $("#cfg-msg").textContent = data.path;
+}
+
+function fillConfig(values) {
+  for (const el of cfgInputs()) {
+    const [sec, key] = el.dataset.key.split(".");
+    const v = values[sec][key];
+    if (el.type === "checkbox") el.checked = !!v;
+    else el.value = v;
+  }
+  toggleAsp();
+}
+
+function readConfig() {
+  const out = {};
+  for (const el of cfgInputs()) {
+    const [sec, key] = el.dataset.key.split(".");
+    out[sec] = out[sec] || {};
+    out[sec][key] = el.type === "checkbox" ? el.checked : el.type === "number" ? Number(el.value) : el.value.trim();
+  }
+  return out;
+}
+
+function toggleAsp() {
+  $("#f-asp").hidden = $('[data-key="extract.backend"]').value !== "assetstudio";
+}
+$('[data-key="extract.backend"]').addEventListener("change", toggleAsp);
+$("#cfg").addEventListener("input", () => { $("#cfg-msg").textContent = "有未保存的修改"; });
+$("#cfg-reset").addEventListener("click", () => { if (savedConfig) { fillConfig(savedConfig); $("#cfg-msg").textContent = "已撤销"; } });
+$("#cfg").addEventListener("submit", async e => {
+  e.preventDefault();
+  $("#cfg-save").disabled = true;
+  try {
+    const data = await api("/api/config", { values: readConfig() });
+    savedConfig = data.values;
+    fillConfig(savedConfig);
+    $("#cfg-msg").textContent = "已保存，下次运行生效。";
+    toast("配置已保存");
+    galleryStale = true;
+    refreshLocal().then(refreshServer);
+  } catch (err) {
+    $("#cfg-msg").textContent = err.message + (err.hint ? " " + err.hint : "");
+  } finally {
+    $("#cfg-save").disabled = false;
+  }
+});
+
+// ---------------------------------------------------------------- boot
+fillIcons();
+(async () => {
+  let tab = "home";
+  try { tab = localStorage.getItem("gkmas-delta.tab") || "home"; } catch { /* storage unavailable */ }
+  connect();
+  try {
+    await refreshLocal();
+  } catch (err) {
+    toast(err.message);
+  }
+  showTab(tab);
+  refreshServer();
+})();
+</script>
+</body>
+</html>

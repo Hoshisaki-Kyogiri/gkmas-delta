@@ -20,8 +20,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from umegkmas.extract import assetstudio, unitypy  # noqa: E402
-from umegkmas.ui import console, info, ok, warn  # noqa: E402
+from gkmas_delta.extract import assetstudio, unitypy  # noqa: E402
+from gkmas_delta.ui import console, info, ok, warn  # noqa: E402
 
 
 def index_images(root: Path) -> dict:

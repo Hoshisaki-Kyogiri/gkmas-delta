@@ -17,3 +17,6 @@ AssetStudioModCLI/
 __pycache__/
 *.pyc
 python/
+
+# 按需下载的外部工具（vgmstream / ffmpeg）
+bin/

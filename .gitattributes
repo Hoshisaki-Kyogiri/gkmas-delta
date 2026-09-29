@@ -7,3 +7,6 @@
 *.md  text eol=lf
 *.toml text eol=lf
 *.proto text eol=lf
+
+# Vendored fonts
+*.woff2 binary
