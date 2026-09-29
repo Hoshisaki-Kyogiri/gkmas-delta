@@ -354,6 +354,16 @@ dialog.confirm h3 { margin: 0 0 6px; font-size: 15px; }
 dialog.confirm p { margin: 0 0 18px; color: var(--muted); }
 dialog.confirm .actions { display: flex; gap: 8px; justify-content: flex-end; }
 dialog.bank { width: min(560px, 92vw); padding: 0; }
+dialog.from { width: min(460px, 92vw); }
+.from-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.from-row > span:first-child { margin-right: 6px; font-weight: 500; }
+.from-row input { width: 90px; font-family: var(--mono); }
+.from-row .mono { color: var(--muted); }
+.from-preview { min-height: 44px; padding: 10px 12px; border-radius: 6px; background: var(--sunk); font-size: 13px; }
+.from-preview b { font-family: var(--mono); font-weight: 600; }
+.from-preview span { display: block; color: var(--muted); }
+#from-warn { margin: 10px 0 0; font-size: 12.5px; }
+dialog.from .actions { margin-top: 16px; }
 .bank-head { display: flex; align-items: flex-start; gap: 6px; padding: 16px 16px 10px; border-bottom: 1px solid var(--line); }
 .bank-head > div { flex: 1; min-width: 0; }
 .bank-head h3 { margin: 0; font: 600 14px/1.4 var(--mono); overflow: hidden; text-overflow: ellipsis; }
@@ -503,6 +513,7 @@ body.has-player .task { bottom: 78px; }
             <button data-run="latest">重新下载最新一个版本<small>只取服务器最新一次更新的内容</small></button>
             <button data-run="full" data-confirm="full">下载整个游戏资源<small>60 GB 以上，很慢</small></button>
             <button data-run="baseline">只记录当前版本号<small>跳过所有待更新内容，不下载</small></button>
+            <button data-from>从指定版本开始获取…<small>获取所选版本（含）到最新版本的全部更新</small></button>
           </div>
         </details>
       </div>
@@ -522,6 +533,10 @@ body.has-player .task { bottom: 78px; }
         <button class="opt" data-run="baseline">
           <b>只记下版本号</b>
           <span>什么都不下载，从下一次游戏更新开始追。</span>
+        </button>
+        <button class="opt" data-from>
+          <b>从指定版本开始</b>
+          <span>获取某个版本（含）到最新版本的全部更新，先预览大小再决定。</span>
         </button>
       </div>
     </div>
@@ -729,6 +744,18 @@ body.has-player .task { bottom: 78px; }
   </section>
 </main>
 
+<dialog class="confirm from" id="from-dlg">
+  <h3>从指定版本开始获取</h3>
+  <p>获取起点版本（含）到服务器最新版本之间的全部更新。</p>
+  <label class="from-row"><span>起点版本</span><span class="mono">v</span><input type="number" id="from-n" min="1" step="1"><span class="mono" id="from-to"></span></label>
+  <div class="from-preview" id="from-preview"></div>
+  <div class="notice warn" id="from-warn" hidden></div>
+  <div class="actions">
+    <button class="btn" id="from-no">取消</button>
+    <button class="btn primary" id="from-go" disabled>开始获取</button>
+  </div>
+</dialog>
+
 <dialog class="confirm" id="confirm">
   <h3 id="confirm-title"></h3>
   <p id="confirm-text"></p>
@@ -827,9 +854,9 @@ function fillIcons(root = document) {
 }
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-const MODE_LABEL = { update: "检查并下载更新", latest: "下载最新一个版本", full: "下载整个游戏资源", baseline: "只记录版本号", convert: "批量转换" };
+const MODE_LABEL = { update: "检查并下载更新", latest: "下载最新一个版本", full: "下载整个游戏资源", baseline: "只记录版本号", from: "从指定版本获取", convert: "批量转换" };
 const RESULT_LABEL = { ok: "完成", failed: "部分文件失败", cancelled: "已取消", error: "出错了" };
-const NOTE_LABEL = { update: "增量更新", latest: "最新一版", full: "全量", baseline: "只记录版本号" };
+const NOTE_LABEL = { update: "增量更新", latest: "最新一版", full: "全量", baseline: "只记录版本号", from: "指定起点" };
 const STAGES = ["获取清单", "下载", "解混淆", "抽取贴图", "转换 webp", "完成"];
 
 const state = { local: null, server: null, job: null, serverError: null };
@@ -1029,14 +1056,69 @@ function renderStatus() {
 }
 
 function setBusy(busy) {
-  $$("[data-run]").forEach(b => b.disabled = busy);
+  $$("[data-run], [data-from]").forEach(b => b.disabled = busy);
   $("#btn-update").textContent = busy ? "正在运行…" : "检查并下载更新";
 }
 
 $("#btn-refresh").addEventListener("click", () => { refreshLocal(); refreshServer(); });
 
 // ---------------------------------------------------------------- run
+// Start-revision picker. Revision numbers can be empty (v20 changed nothing);
+// the preview shows what a start really yields, so any number is fine to try.
+let fromTimer = 0, fromSeq = 0;
+function openFrom() {
+  $$("details.more").forEach(d => d.open = false);
+  const L = state.local, S = state.server;
+  const latest = S ? S.server_revision : null;
+  const input = $("#from-n");
+  input.max = latest || "";
+  $("#from-to").textContent = latest ? `→ v${latest}` : "";
+  // Default: pick up right after the local record, or just the latest revision.
+  input.value = L && L.has_baseline && latest ? Math.min(L.revision + 1, latest) : latest || 1;
+  $("#from-dlg").showModal();
+  previewFrom();
+}
+
+async function previewFrom() {
+  const n = Number($("#from-n").value);
+  const box = $("#from-preview"), warn = $("#from-warn"), go = $("#from-go");
+  const L = state.local, S = state.server;
+  go.disabled = true;
+  warn.hidden = true;
+  if (!Number.isInteger(n) || n < 1) { box.textContent = "起点版本号至少是 1。"; return; }
+  if (S && n > S.server_revision) { box.textContent = `服务器最新版本是 v${S.server_revision}。`; return; }
+  if (L && L.has_baseline && n > L.revision + 1) {
+    warn.hidden = false;
+    warn.textContent = `本地记录是 v${L.revision}，v${L.revision + 1} 到 v${n - 1} 的更新不会下载。`;
+  }
+  box.textContent = "正在向服务器预览…";
+  const seq = ++fromSeq;
+  try {
+    const p = await api("/api/preview?from=" + n);
+    if (seq !== fromSeq) return;
+    box.innerHTML = "<b></b><span></span>";
+    $("b", box).textContent = `v${n} → v${p.revision}`;
+    $("span", box).textContent = p.bundles || p.files
+      ? `${p.bundles} 个 Asset / ${p.files} 个 Resource，共 ${size(p.bytes)}`
+      : "这段版本里没有需要下载的文件。";
+    go.disabled = false;
+  } catch (err) {
+    if (seq === fromSeq) box.textContent = err.message;
+  }
+}
+
+$("#from-n").addEventListener("input", () => { clearTimeout(fromTimer); fromTimer = setTimeout(previewFrom, 400); });
+$("#from-no").addEventListener("click", () => $("#from-dlg").close());
+$("#from-go").addEventListener("click", async () => {
+  const start = Number($("#from-n").value);
+  $("#from-dlg").close();
+  try { await api("/api/run", { mode: "from", start }); }
+  catch (err) { toast(err.message); }
+});
+
 document.addEventListener("click", async ev => {
+  const pick = ev.target.closest("[data-from]");
+  if (pick && !pick.disabled) { openFrom(); return; }
   const btn = ev.target.closest("[data-run]");
   if (!btn || btn.disabled) return;
   $$("details.more").forEach(d => d.open = false);
@@ -1074,7 +1156,8 @@ function renderJob() {
   $("#job-card").hidden = !running;
   setBusy(running);
   if (!running) { document.title = "gkmas-delta 控制台"; return; }
-  $("#job-title").textContent = MODE_LABEL[state.job.mode] + (state.job.force ? "（重新处理）" : "");
+  $("#job-title").textContent = MODE_LABEL[state.job.mode] + (state.job.force ? "（重新处理）" : "") +
+    (state.job.mode === "from" ? `：v${state.job.start} 起` : "");
   $("#btn-cancel").disabled = false;
   $("#btn-cancel").textContent = "取消";
   renderSteps();

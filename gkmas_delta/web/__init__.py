@@ -29,7 +29,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 from .. import __version__, external, media, pipeline
 from ..config import load_config, read_raw, save_values
 from ..errors import UmeError
-from ..status import local_status, server_status
+from ..status import local_status, preview_from, server_status
 from ..ui import human_size
 from ..ui import (
     Cancelled,
@@ -60,7 +60,7 @@ STREAM_CHUNK = 256 * 1024
 _install_lock = threading.Lock()
 GALLERY_PAGE_SIZE = 200
 # Pipeline modes the page may start. None = "whatever the next sensible run is".
-MODES = {"update": None, "latest": "latest", "full": "full", "baseline": "baseline"}
+MODES = {"update": None, "latest": "latest", "full": "full", "baseline": "baseline", "from": "from"}
 
 mimetypes.add_type("image/webp", ".webp")
 mimetypes.add_type("audio/mpeg", ".mp3")
@@ -130,11 +130,13 @@ class JobRunner:
             self.current = {**meta, "started_at": time.time()}
         reset_cancel()
 
-    def start(self, mode_key: str, force: bool) -> None:
+    def start(self, mode_key: str, force: bool, start: int | None = None) -> None:
         if mode_key not in MODES:
             raise UmeError(f"未知的操作：{mode_key}")
-        self._claim({"mode": mode_key, "force": force})
-        threading.Thread(target=self._run, args=(self._update, mode_key, force), daemon=True).start()
+        if mode_key == "from" and (start is None or start < 1):
+            raise UmeError("起点版本号至少是 1。")
+        self._claim({"mode": mode_key, "force": force, "start": start})
+        threading.Thread(target=self._run, args=(self._update, mode_key, force, start), daemon=True).start()
 
     def start_convert(self, kind: str, files: list) -> None:
         # Fail before claiming the slot if the tool is missing, so the page can
@@ -143,9 +145,9 @@ class JobRunner:
         self._claim({"mode": "convert", "media": kind, "count": len(files)})
         threading.Thread(target=self._run, args=(self._convert, kind, files), daemon=True).start()
 
-    def _update(self, mode_key: str, force: bool) -> str:
+    def _update(self, mode_key: str, force: bool, start: int | None) -> str:
         config = load_config(self.config_path)
-        code = pipeline.run(config, requested_mode=MODES[mode_key], force=force, interactive=False)
+        code = pipeline.run(config, requested_mode=MODES[mode_key], force=force, interactive=False, start=start)
         return "ok" if code == 0 else "failed"
 
     def _convert(self, kind: str, files: list) -> str:
@@ -364,6 +366,11 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                     self._send_json(server_status(self._config()))
                 elif url.path == "/api/config":
                     self._send_json({"values": read_raw(config_path), "path": str(config_path)})
+                elif url.path == "/api/preview":
+                    start = int(query.get("from", ["0"])[0])
+                    if start < 1:
+                        raise UmeError("起点版本号至少是 1。")
+                    self._send_json(preview_from(self._config(), start))
                 elif url.path == "/api/gallery":
                     self._send_json({"revisions": _revision_dirs(self._config())})
                 elif url.path == "/api/images":
@@ -427,7 +434,10 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
             try:
                 body = self._read_json()
                 if url.path == "/api/run":
-                    jobs.start(str(body.get("mode", "update")), bool(body.get("force", False)))
+                    start = body.get("start")
+                    if start is not None and not isinstance(start, int):
+                        raise UmeError("起点版本号必须是整数。")
+                    jobs.start(str(body.get("mode", "update")), bool(body.get("force", False)), start)
                     self._send_json(jobs.snapshot())
                 elif url.path == "/api/cancel":
                     if jobs.current:

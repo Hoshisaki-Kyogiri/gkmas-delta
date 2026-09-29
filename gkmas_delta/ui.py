@@ -4,6 +4,7 @@ Every message is also broadcast to registered listeners, which is how the web
 console mirrors the terminal without the pipeline knowing it exists.
 """
 
+import sys
 import threading
 import time
 
@@ -11,6 +12,15 @@ from rich import progress as rich_progress
 from rich.console import Console
 
 from .errors import UmeError
+
+# A console left on a legacy code page (GBK on Chinese Windows) can't encode
+# the progress spinner or some Japanese names. Degrade those characters to "?"
+# rather than let a display error abort the download or conversion behind it.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass
 
 console = Console()
 

@@ -18,6 +18,19 @@ def local_status(config) -> dict:
     }
 
 
+def preview_from(config, start: int) -> dict:
+    """What fetching vSTART (inclusive) up to the latest would download."""
+    diff, _ = octo.fetch(max(start - 1, 0), config.app_version, config.unity_version)
+    manifest, _ = octo.drop_deleted(octo.to_dict(diff))
+    return {
+        "start": start,
+        "revision": manifest["revision"],
+        "bundles": len(manifest["assetBundleList"]),
+        "files": len(manifest["resourceList"]),
+        "bytes": octo.total_bytes(manifest),
+    }
+
+
 def server_status(config) -> dict:
     """Ask the server where it is. Raises UmeError on network or version trouble."""
     state = State.load(config.paths.state_file)

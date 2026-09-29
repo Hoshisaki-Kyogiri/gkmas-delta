@@ -7,6 +7,9 @@ Three ways to pick a manifest:
   full               the entire catalogue (~65 GB of downloads).
   baseline           record the current revision without downloading anything,
                      so future runs are incremental from here on.
+  from               everything from a chosen revision (inclusive) to the latest.
+                     Revision numbers can be empty (v20 changed nothing), which
+                     is harmless: an empty start behaves like its predecessor.
 
 The server does the diffing, so incremental mode needs no local manifest history
 - just the revision number in state.json.
@@ -70,10 +73,14 @@ def resolve_mode(config, state: State, requested: str | None, interactive: bool 
     return "update"
 
 
-def _base_revision(config, state: State, mode: str) -> int:
+def _base_revision(config, state: State, mode: str, start: int | None = None) -> int:
     """Which revision to diff against. 0 means "give me the whole catalogue"."""
     if mode == "update":
         return state.last_revision
+
+    if mode == "from":
+        # list/N means "I already have N", so including N itself asks for N-1.
+        return max(start - 1, 0)
 
     if mode == "latest":
         # First run, no local history: ask what the newest revision is (a 54-byte
@@ -85,14 +92,14 @@ def _base_revision(config, state: State, mode: str) -> int:
     return 0
 
 
-def fetch_manifest(config, state: State, mode: str, local_cache=None):
+def fetch_manifest(config, state: State, mode: str, local_cache=None, start: int | None = None):
     """Returns (manifest dict, raw proto bytes, base revision or None)."""
     if local_cache is not None:
         info(f"从本地缓存读取清单：{local_cache}")
         database, proto_bytes = octo.decrypt_local_cache(local_cache)
         return octo.to_dict(database), proto_bytes, None
 
-    base = _base_revision(config, state, mode)
+    base = _base_revision(config, state, mode, start)
     if base:
         info(f"向服务器索取 v{base} 之后的更新...")
     else:
@@ -103,8 +110,15 @@ def fetch_manifest(config, state: State, mode: str, local_cache=None):
 
 
 def run(
-    config, requested_mode: str | None = None, local_cache=None, force: bool = False, interactive: bool = True
+    config,
+    requested_mode: str | None = None,
+    local_cache=None,
+    force: bool = False,
+    interactive: bool = True,
+    start: int | None = None,
 ) -> int:
+    if requested_mode == "from" and (start is None or start < 1):
+        raise UmeError("起点版本号至少是 1。")
     paths = config.paths
     paths.ensure()
     state = State.load(paths.state_file)
@@ -115,7 +129,7 @@ def run(
         return 0
 
     step("获取清单")
-    manifest, proto_bytes, base = fetch_manifest(config, state, mode, local_cache)
+    manifest, proto_bytes, base = fetch_manifest(config, state, mode, local_cache, start)
     revision = manifest["revision"]
 
     if mode == "baseline":

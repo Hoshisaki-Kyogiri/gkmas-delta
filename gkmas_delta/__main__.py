@@ -24,6 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--full", action="store_true", help="下载完整资源（60 GB 以上）")
     mode.add_argument("--latest", action="store_true", help="下载最新一个版本的更新内容")
     mode.add_argument("--baseline", action="store_true", help="只记录当前版本号，不下载")
+    mode.add_argument("--from", dest="start", type=int, metavar="N", help="获取 vN（含）到最新版本的全部更新")
     mode.add_argument("--status", action="store_true", help="显示本地记录的版本和服务器最新版本")
     mode.add_argument("--web", action="store_true", help="打开本地网页控制台")
 
@@ -93,8 +94,10 @@ def main(argv=None) -> int:
             mode = "latest"
         elif args.baseline:
             mode = "baseline"
+        elif args.start is not None:
+            mode = "from"
 
-        return run(config, requested_mode=mode, local_cache=args.local_cache, force=args.force)
+        return run(config, requested_mode=mode, local_cache=args.local_cache, force=args.force, start=args.start)
 
     except UmeError as exc:
         console.print()

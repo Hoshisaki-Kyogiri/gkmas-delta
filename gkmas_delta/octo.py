@@ -14,6 +14,7 @@ manifest history is needed to compute a diff.
 import hashlib
 import json
 import re
+import time
 from pathlib import Path
 
 import requests
@@ -65,16 +66,25 @@ def _decrypt_response(encrypted: bytes) -> bytes:
         ) from exc
 
 
+FETCH_ATTEMPTS = 3
+
+
 def fetch(revision: int, app_version: str, unity_version: str) -> tuple[octodb_pb2.Database, bytes]:
     """Fetch a manifest. revision=0 means the full catalogue."""
     url = OCTO_ENDPOINT.format(app_version=app_version, revision=revision)
-    try:
-        response = requests.get(url, headers=_headers(unity_version), timeout=60)
-    except requests.exceptions.RequestException as exc:
-        raise NetworkError(
-            "连不上资源服务器。",
-            "检查网络连接或代理设置后重试。",
-        ) from exc
+    # The server drops the TLS connection now and then, most often when asked
+    # several times in a row; a short wait and a retry gets through.
+    for attempt in range(FETCH_ATTEMPTS):
+        try:
+            response = requests.get(url, headers=_headers(unity_version), timeout=60)
+            break
+        except requests.exceptions.RequestException as exc:
+            if attempt == FETCH_ATTEMPTS - 1:
+                raise NetworkError(
+                    "连不上资源服务器。",
+                    "检查网络连接或代理设置后重试。",
+                ) from exc
+            time.sleep(2 * (attempt + 1))
 
     # Both codes come back for a version path the CDN doesn't serve.
     if response.status_code in (400, 404):
