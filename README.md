@@ -19,7 +19,7 @@ python -m gkmas_delta --web
 
 ### 网页控制台
 
-不带参数运行 `启动.bat` 时，程序在本机启动网页控制台，并在浏览器中打开 `http://127.0.0.1:8765/`。控制台提供以下功能：
+运行 `启动.bat`（或 `gkmas-delta.bat --web`）后，程序在本机启动网页控制台，并在浏览器中打开 `http://127.0.0.1:8765/`。控制台提供以下功能：
 
 - **概览**：显示本地版本、服务器版本及待更新内容的数量与大小；执行更新时显示各阶段进度、传输速度与日志，并支持中途取消。
 - **图片**：按版本浏览抽取出的贴图。
@@ -73,23 +73,24 @@ python -m gkmas_delta --web
 
 ## 命令行
 
-不带参数运行 `gkmas-delta.bat` 等同于「检查并下载更新」，不启动网页控制台，适用于计划任务。`启动.bat` 在带参数运行时同样进入命令行模式。
+发布包使用 `gkmas-delta.bat`，从源码运行时使用 `python -m gkmas_delta`，两者参数相同。不带参数时执行「检查并下载更新」，不启动网页控制台，适用于计划任务。
 
 ```
-启动.bat --web                启动网页控制台（启动.bat 不带参数时的默认行为）
-启动.bat --web --port 9000    指定端口，默认 8765，被占用时自动顺延
-启动.bat --web --no-browser   不自动打开浏览器
-启动.bat --status             查看本地版本、服务器版本及待更新数量
-启动.bat --latest             仅下载最新一个版本的更新内容
-启动.bat --full               下载完整资源（约 63 GB）
-启动.bat --baseline           仅记录当前版本号，不下载
-启动.bat --force              版本号未变化时也重新处理
-启动.bat --workers 24         临时指定下载线程数
-启动.bat --no-pause           结束后不等待回车
-启动.bat --local-cache <文件>  使用从设备导出的 octocacheevai
+gkmas-delta.bat                        检查并下载更新
+gkmas-delta.bat --web                  启动网页控制台
+gkmas-delta.bat --web --port 9000      指定控制台端口，默认 8765，被占用时自动顺延
+gkmas-delta.bat --web --no-browser     启动控制台但不打开浏览器
+gkmas-delta.bat --status               查看本地版本、服务器版本及待更新数量
+gkmas-delta.bat --latest               仅下载最新一个版本的更新内容
+gkmas-delta.bat --full                 下载完整资源（约 63 GB）
+gkmas-delta.bat --baseline             仅记录当前版本号，不下载
+gkmas-delta.bat --force                版本号未变化时也重新处理
+gkmas-delta.bat --workers 24           临时指定下载线程数
+gkmas-delta.bat --no-pause             结束后不等待回车
+gkmas-delta.bat --local-cache <文件>   使用从设备导出的 octocacheevai
 ```
 
-`启动.bat` 仅将参数转发给 `gkmas-delta.bat`。以 ASCII 文件名作为实际入口，是为了规避部分环境下中文文件名导致的问题。
+`启动.bat` 供双击使用，等同于 `gkmas-delta.bat --web`。
 
 ## 配置
 
