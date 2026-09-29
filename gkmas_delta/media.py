@@ -49,8 +49,8 @@ CHARACTERS = {
 }
 
 STORY_CATEGORIES = {
-    "cidol": "偶像卡剧情",
-    "csprt": "支援卡剧情",
+    "cidol": "Produce卡剧情",
+    "csprt": "Support卡剧情",
     "dear": "亲爱度剧情",
     "event": "活动剧情",
     "pstory": "培育剧情",
@@ -122,6 +122,19 @@ def _inside(root: Path, name: str) -> Path:
     if not name or path.parent != root.resolve() or not path.is_file():
         raise UmeError(f"找不到文件：{name}")
     return path
+
+
+# Card art is named after the card: cidol-<char>-... for Produce cards,
+# csprt-... for Support cards.
+CARD_KINDS = {"produce": "Produce卡", "support": "Support卡"}
+
+
+def card_kind(name: str) -> str:
+    if "cidol-" in name:
+        return "produce"
+    if "csprt-" in name:
+        return "support"
+    return ""
 
 
 def character_of(name: str) -> str:

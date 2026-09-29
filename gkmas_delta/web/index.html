@@ -561,6 +561,12 @@ body.has-player .task { bottom: 78px; }
         <button data-source="png" aria-pressed="true">PNG 原图</button>
         <button data-source="webp" aria-pressed="false">WebP 转换</button>
       </div>
+      <div class="seg" id="g-card">
+        <button data-card="" aria-pressed="true">全部</button>
+        <button data-card="produce" aria-pressed="false">Produce卡</button>
+        <button data-card="support" aria-pressed="false">Support卡</button>
+      </div>
+      <select id="g-char" aria-label="角色"><option value="">全部角色</option></select>
       <input type="search" id="g-q" placeholder="按文件名或路径筛选，例如 costume">
       <button class="btn" id="g-open"><i data-icon="folder"></i>打开文件夹</button>
     </div>
@@ -1202,7 +1208,7 @@ function connect() {
 }
 
 // ---------------------------------------------------------------- gallery
-const gal = { revisions: [], revision: 0, source: "png", q: "", offset: 0, total: 0, items: [], loading: false };
+const gal = { revisions: [], revision: 0, source: "png", q: "", card: "", character: "", offset: 0, total: 0, items: [], loading: false };
 let galleryStale = true;
 
 async function loadGallery() {
@@ -1249,9 +1255,17 @@ async function queryImages(reset) {
   gal.loading = true;
   if (reset) { gal.offset = 0; gal.items = []; $("#g-grid").innerHTML = ""; }
   try {
-    const params = new URLSearchParams({ revision: gal.revision, source: gal.source, q: gal.q, offset: gal.offset });
+    const params = new URLSearchParams({
+      revision: gal.revision, source: gal.source, q: gal.q, offset: gal.offset, card: gal.card, character: gal.character,
+    });
     const data = await api("/api/images?" + params);
     gal.total = data.total;
+    if (reset) {
+      // Characters found under the other filters; keep the current pick listed.
+      const codes = new Set(data.characters);
+      if (gal.character) codes.add(gal.character);
+      fillSelect($("#g-char"), [...codes].map(c => [c, data.names[c] || c]).sort(byName), "全部角色");
+    }
     const start = gal.items.length;
     gal.items.push(...data.items);
     gal.offset = gal.items.length;
@@ -1267,8 +1281,13 @@ async function queryImages(reset) {
       frag.append(tile);
     });
     $("#g-grid").append(frag);
+    const filters = [
+      gal.card && (gal.card === "produce" ? "Produce卡" : "Support卡"),
+      gal.character && $("#g-char").selectedOptions[0]?.textContent,
+      gal.q && `「${gal.q}」`,
+    ].filter(Boolean);
     $("#g-count").textContent = gal.total
-      ? `v${gal.revision} · 共 ${gal.total} 张${gal.q ? `（筛选：${gal.q}）` : ""}，已显示 ${gal.items.length}`
+      ? `v${gal.revision} · 共 ${gal.total} 张${filters.length ? `（${filters.join(" · ")}）` : ""}，已显示 ${gal.items.length}`
       : "没有匹配的图片。";
     $("#g-more").hidden = gal.items.length >= gal.total;
   } catch (err) {
@@ -1288,6 +1307,12 @@ $("#g-q").addEventListener("input", e => {
   clearTimeout(qTimer);
   qTimer = setTimeout(() => { gal.q = e.target.value.trim(); queryImages(true); }, 300);
 });
+$$("#g-card button").forEach(b => b.addEventListener("click", () => {
+  gal.card = b.dataset.card;
+  $$("#g-card button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  queryImages(true);
+}));
+$("#g-char").addEventListener("change", e => { gal.character = e.target.value; queryImages(true); });
 $("#g-more").addEventListener("click", () => queryImages(false));
 $("#g-open").addEventListener("click", async () => {
   try { await api("/api/open", { target: "images", revision: gal.revision, source: gal.source }); }

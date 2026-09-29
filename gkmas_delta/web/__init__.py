@@ -233,26 +233,44 @@ def _gallery_dir(config, revision: int, source: str) -> Path:
     return paths.revision_converted(revision) if source == "webp" else paths.revision_images(revision)
 
 
-def _list_images(config, revision: int, source: str, query: str, offset: int) -> dict:
+def _list_images(config, revision: int, source: str, query: str, offset: int, card: str = "", character: str = "") -> dict:
     root = _gallery_dir(config, revision, source)
+    empty = {"total": 0, "items": [], "characters": [], "names": media.CHARACTERS, "cards": media.CARD_KINDS}
     if not root.is_dir():
-        return {"total": 0, "items": []}
+        return empty
     query = query.lower()
-    files = sorted(
-        path
-        for path in root.rglob("*")
-        if path.suffix.lower() in IMAGE_SUFFIXES and (not query or query in path.as_posix().lower())
-    )
+    matched = []
+    present = set()
+    for path in sorted(root.rglob("*")):
+        if path.suffix.lower() not in IMAGE_SUFFIXES:
+            continue
+        relative = path.relative_to(root).as_posix()
+        if query and query not in relative.lower():
+            continue
+        kind = media.card_kind(path.name)
+        if card and kind != card:
+            continue
+        # The folder chain often names the character when the file doesn't.
+        who = media.character_of(relative.replace("/", "_"))
+        # Offer every character the other filters leave, not just the chosen one.
+        if who:
+            present.add(who)
+        if character and who != character:
+            continue
+        matched.append((path, relative, kind, who))
+
     data_dir = config.paths.data_dir
     items = [
         {
             "path": path.relative_to(data_dir).as_posix(),
             "name": path.name,
-            "group": path.parent.relative_to(root).as_posix(),
+            "group": str(Path(relative).parent.as_posix()),
+            "card": kind,
+            "character": who,
         }
-        for path in files[offset : offset + GALLERY_PAGE_SIZE]
+        for path, relative, kind, who in matched[offset : offset + GALLERY_PAGE_SIZE]
     ]
-    return {"total": len(files), "items": items}
+    return {**empty, "total": len(matched), "items": items, "characters": sorted(present)}
 
 
 def _parse_range(header, size: int):
@@ -356,6 +374,8 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                             query.get("source", ["png"])[0],
                             query.get("q", [""])[0],
                             max(0, int(query.get("offset", ["0"])[0])),
+                            query.get("card", [""])[0],
+                            query.get("character", [""])[0],
                         )
                     )
                 elif url.path == "/api/audio":
