@@ -117,6 +117,9 @@ def strip_build_tooling(python_dir: Path) -> None:
             shutil.rmtree(entry) if entry.is_dir() else entry.unlink()
     for cache in python_dir.rglob("__pycache__"):
         shutil.rmtree(cache, ignore_errors=True)
+    # pip's console-script launchers hard-code this machine's build path in
+    # their shebang, so they leak it and can't run anywhere else anyway.
+    shutil.rmtree(python_dir / "Scripts", ignore_errors=True)
     log("已移除 pip / setuptools 等构建工具")
 
 
