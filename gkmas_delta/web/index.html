@@ -4,21 +4,41 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>gkmas-delta</title>
-<link rel="icon" href="data:,">
-<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="icon" href="/logo.webp" type="image/webp">
+<script>
+// Pick the theme before first paint, so a dark system never flashes light.
+// "auto" follows the system and keeps following it while the page is open.
+(() => {
+  const system = matchMedia("(prefers-color-scheme: dark)");
+  let pref = "auto";
+  try { pref = localStorage.getItem("gkmas-delta.theme") || "auto"; } catch { /* storage unavailable */ }
+  window.setTheme = (next, save = false) => {
+    pref = ["light", "dark"].includes(next) ? next : "auto";
+    document.documentElement.dataset.theme = pref === "auto" ? (system.matches ? "dark" : "light") : pref;
+    document.documentElement.dataset.themePref = pref;
+    if (save) try { localStorage.setItem("gkmas-delta.theme", pref); } catch { /* storage unavailable */ }
+  };
+  system.addEventListener("change", () => { if (pref === "auto") setTheme("auto"); });
+  setTheme(pref);
+})();
+</script>
+<!-- The query only dodges browsers that cached fonts.css for a year before it was served no-store. -->
+<link rel="stylesheet" href="fonts/fonts.css?quicksand">
 <style>
 :root {
   --side: 188px;
-  --bg: #fafaf9;
-  --side-bg: #f2f1ee;
+  /* Slate mist: the light twin of the dark palette. */
+  --bg: #f6f8fb;
+  --side-bg: #eaeef4;
   --panel: #ffffff;
-  --sunk: #f4f3f0;
-  --line: #e4e2dd;
-  --line-strong: #d3d0c9;
-  --text: #1d1c1a;
-  --muted: #74716b;
-  --faint: #a19d95;
+  --sunk: #eff2f7;
+  --line: #d9e0ea;
+  --line-strong: #c4cdda;
+  --text: #1b1f27;
+  --muted: #667185;
+  --faint: #98a1b0;
   --accent: #706caa;
+  --brand: #6a86bd;
   --accent-ink: #ffffff;
   --accent-soft: #eeedf7;
   --ok: #2e7d4f;
@@ -26,7 +46,7 @@
   --warn-soft: #fbf3dc;
   --err: #c0392b;
   --err-soft: #fbeae8;
-  --log-bg: #1b1a18;
+  --log-bg: #1b1f27;
   --log-text: #e4e0d8;
   --log-muted: #8d887f;
   /* All Noto, bundled under /fonts. SC shapes for the Chinese UI; lang="ja"
@@ -34,28 +54,30 @@
   --sans: "Noto Sans SC Variable", "Noto Sans JP Variable", sans-serif;
   --serif: "Noto Serif JP Variable", serif;
   --mono: "Noto Sans Mono Variable", "Noto Sans SC Variable", monospace;
+  color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #171716;
-    --side-bg: #1d1c1b;
-    --panel: #1f1e1d;
-    --sunk: #252422;
-    --line: #33312e;
-    --line-strong: #45423e;
-    --text: #e9e6e0;
-    --muted: #9a958d;
-    --faint: #6d6963;
-    --accent: #a5a1db;
-    --accent-ink: #17161f;
-    --accent-soft: #2a2839;
-    --ok: #6cc08f;
-    --warn: #d9ad4f;
-    --warn-soft: #362d17;
-    --err: #ec7b6f;
-    --err-soft: #3a211e;
-    --log-bg: #111110;
-  }
+/* Slate blue-grey, so the blue wordmark sits in its own family. */
+:root[data-theme="dark"] {
+  --bg: #15181e;
+  --side-bg: #1b1f27;
+  --panel: #1e222b;
+  --sunk: #242935;
+  --line: #2e3440;
+  --line-strong: #3e4555;
+  --text: #e5e8ee;
+  --muted: #939bab;
+  --faint: #646c7c;
+  --accent: #a5a1db;
+  --brand: #a0b6dc;
+  --accent-ink: #17161f;
+  --accent-soft: #282a3d;
+  --ok: #6cc08f;
+  --warn: #d9ad4f;
+  --warn-soft: #362d17;
+  --err: #ec7b6f;
+  --err-soft: #3a211e;
+  --log-bg: #101318;
+  color-scheme: dark;
 }
 [lang|="ja"] { --sans: "Noto Sans JP Variable", "Noto Sans SC Variable", sans-serif; --mono: "Noto Sans Mono Variable", "Noto Sans JP Variable", monospace; }
 * { box-sizing: border-box; }
@@ -72,9 +94,10 @@ aside {
   background: var(--side-bg); border-right: 1px solid var(--line);
   display: flex; flex-direction: column; padding: 18px 10px 14px;
 }
-.brand { padding: 0 10px 18px; }
-.brand b { display: block; font-family: var(--mono); font-size: 14px; letter-spacing: -.01em; }
-.brand span { color: var(--muted); font-size: 12px; }
+.brand { padding: 0 2px 18px; display: flex; align-items: center; gap: 8px; }
+.brand img { width: 40px; height: 40px; flex: none; }
+.brand b { display: block; font-family: "Quicksand Variable", var(--sans); font-weight: 700; color: var(--brand); font-size: 17.9px; line-height: 1.2; }
+.brand span { color: var(--muted); font-size: 11px; white-space: nowrap; }
 nav { display: flex; flex-direction: column; gap: 1px; }
 nav button {
   border: 0; background: none; text-align: left; padding: 6px 10px; border-radius: 5px;
@@ -87,6 +110,9 @@ nav .sep { height: 1px; background: var(--line); margin: 8px 10px; }
 .side-foot { margin-top: auto; padding: 0 10px; font-size: 12px; color: var(--muted); display: grid; gap: 4px; }
 .side-foot .mono { color: var(--text); }
 .conn { display: inline-flex; align-items: center; gap: 6px; }
+.theme { justify-self: start; margin-top: 6px; }
+.theme button { height: 24px; padding: 0 7px; }
+.theme svg.i { width: 14px; height: 14px; vertical-align: -2px; }
 .conn i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
 .conn.off i { background: var(--err); }
 
@@ -422,11 +448,14 @@ body.has-player .task { bottom: 78px; }
 @media (max-width: 980px) {
   aside { position: sticky; top: 0; inset: auto; width: auto; height: auto; flex-direction: row; align-items: center; padding: 8px 12px; border-right: 0; border-bottom: 1px solid var(--line); gap: 10px; }
   .brand { padding: 0; }
+  .brand img { width: 28px; height: 28px; }
+  .brand b { font-size: 17px; }
   .brand span, .side-foot .ver, nav .sep { display: none; }
   nav { flex-direction: row; overflow-x: auto; flex: 1; }
   nav button { white-space: nowrap; }
   nav button[aria-selected="true"]::before { display: none; }
-  .side-foot { margin: 0; }
+  .side-foot { margin: 0; grid-auto-flow: column; align-items: center; gap: 10px; }
+  .theme { margin-top: 0; }
   main { margin-left: 0; padding: 16px 18px 56px; }
   .story-layout { grid-template-columns: 1fr; }
   .story-side { position: static; max-height: none; }
@@ -457,7 +486,7 @@ body.has-player .task { bottom: 78px; }
 </head>
 <body>
 <aside>
-  <div class="brand"><b>gkmas-delta</b><span>学园偶像大师资源更新</span></div>
+  <div class="brand"><img src="/logo.webp" alt=""><div><b>gkmas-delta</b><span>学园偶像大师资源更新</span></div></div>
   <nav role="tablist">
     <button role="tab" data-tab="home" aria-selected="true">概览</button>
     <button role="tab" data-tab="gallery" aria-selected="false">图片</button>
@@ -470,6 +499,11 @@ body.has-player .task { bottom: 78px; }
   <div class="side-foot">
     <span class="ver">本地 <span class="mono" id="f-local">—</span> · 服务器 <span class="mono" id="f-server">—</span></span>
     <span class="conn" id="conn"><i></i><span>已连接</span></span>
+    <div class="seg theme" id="theme" role="group" aria-label="深浅色">
+      <button type="button" data-theme-pick="auto" title="跟随系统" data-icon="auto"></button>
+      <button type="button" data-theme-pick="light" title="浅色" data-icon="sun"></button>
+      <button type="button" data-theme-pick="dark" title="深色" data-icon="moon"></button>
+    </div>
   </div>
 </aside>
 
@@ -855,6 +889,9 @@ const ICONS = {
   down: '<path d="M7 10l5 5 5-5"/>',
   wave: '<path d="M4 12h1.5M8 8.5v7M11.5 5.5v13M15 9v6M18.5 11v2"/>',
   film: '<rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M8 5v14M16 5v14M4 9.5h4M4 14.5h4M16 9.5h4M16 14.5h4"/>',
+  auto: '<circle cx="12" cy="12" r="7.5"/><path class="f" d="M12 4.5a7.5 7.5 0 0 1 0 15z"/>',
+  sun: '<circle cx="12" cy="12" r="3.8"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/>',
+  moon: '<path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"/>',
 };
 function icon(name) {
   // Filled shapes are marked with class "f" so one stroke style fits all.
@@ -870,6 +907,16 @@ function fillIcons(root = document) {
   }
 }
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+function syncThemePicker() {
+  const pref = document.documentElement.dataset.themePref;
+  $$("[data-theme-pick]").forEach(b => b.setAttribute("aria-pressed", b.dataset.themePick === pref));
+}
+$$("[data-theme-pick]").forEach(b => b.addEventListener("click", () => {
+  setTheme(b.dataset.themePick, true);
+  syncThemePicker();
+}));
+syncThemePicker();
 
 const MODE_LABEL = { update: "检查并下载更新", latest: "下载最新一个版本", full: "下载整个游戏资源", baseline: "只记录版本号", from: "从指定版本获取", convert: "批量转换" };
 const RESULT_LABEL = { ok: "完成", failed: "部分文件失败", cancelled: "已取消", error: "出错了" };

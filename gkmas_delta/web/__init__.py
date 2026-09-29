@@ -50,6 +50,7 @@ from ..ui import (
 DEFAULT_PORT = 8765
 PORT_ATTEMPTS = 20
 PAGE = Path(__file__).with_name("index.html")
+LOGO = Path(__file__).with_name("logo.webp")
 # Noto fonts vendored by tools/fetch_fonts.py; the console works offline.
 FONTS = Path(__file__).with_name("fonts")
 IMAGE_SUFFIXES = {".png", ".webp", ".jpg", ".jpeg"}
@@ -371,6 +372,8 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
             try:
                 if url.path in ("/", "/index.html"):
                     self._serve_file(PAGE, cache=False)
+                elif url.path == "/logo.webp":
+                    self._serve_file(LOGO, max_age=86400)
                 elif url.path == "/api/ping":
                     self._send_json({"app": "gkmas-delta", "version": __version__})
                 elif url.path == "/api/state":
@@ -601,7 +604,11 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
             if not target.is_relative_to(root) or target.suffix not in (".woff2", ".css") or not target.is_file():
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
-            self._serve_file(target, max_age=31536000)
+            # fonts.css changes when a family is added; the .woff2 slices it points at don't.
+            if target.suffix == ".css":
+                self._serve_file(target, cache=False)
+            else:
+                self._serve_file(target, max_age=31536000)
 
         def _serve_data(self, relative: str) -> None:
             root = self._config().paths.data_dir.resolve()

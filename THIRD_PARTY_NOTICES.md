@@ -83,8 +83,8 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 用于将 CRI 格式的 `.usm` 视频转换为 mp4。该程序不随发布包分发，仅在首次通过控制台打开视频时下载至 `bin/ffmpeg/`。此构建包含 libx264，以 GPL 协议发布，源代码见 https://ffmpeg.org/download.html 。
 
-## Noto 字体
+## Noto 与 Quicksand 字体
 
-来源：Google Noto Fonts，采用 Fontsource 5.3.0 的可变字重版本（https://fontsource.org/ ），位于 `gkmas_delta/web/fonts/`，由 `tools/fetch_fonts.py` 生成。
+来源：Google Noto Fonts 与 Quicksand（The Quicksand Project Authors），均采用 Fontsource 5.3.0 的可变字重版本（https://fontsource.org/ ），位于 `gkmas_delta/web/fonts/`，由 `tools/fetch_fonts.py` 生成。
 
-包括 Noto Sans SC、Noto Sans JP、Noto Serif JP 与 Noto Sans Mono，以 SIL Open Font License 1.1 协议分发，许可证全文见各字体文件夹中的 `LICENSE`。
+包括 Noto Sans SC、Noto Sans JP、Noto Serif JP、Noto Sans Mono 与 Quicksand，以 SIL Open Font License 1.1 协议分发，许可证全文见各字体文件夹中的 `LICENSE`。

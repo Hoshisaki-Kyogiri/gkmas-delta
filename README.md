@@ -31,7 +31,7 @@ python -m gkmas_delta --web
 - **定位文件**：图片、音频、视频与剧情均提供「在文件夹中显示」，可在资源管理器中直接定位到对应文件。
 - **设置**：编辑 `config.toml` 中的常用配置项，保存时保留文件中原有的注释。
 
-界面字体均使用随程序分发的 Noto 字体（中文界面为 Noto Sans SC，剧情为 Noto Serif JP / Noto Sans JP，等宽文本为 Noto Sans Mono），显示效果不受系统已安装字体影响，且无需联网。字体按 Unicode 范围切片，浏览器仅加载页面实际用到的部分。
+界面字体均使用随程序分发的 Noto 字体（中文界面为 Noto Sans SC，剧情为 Noto Serif JP / Noto Sans JP，等宽文本为 Noto Sans Mono，标题为 Quicksand），显示效果不受系统已安装字体影响，且无需联网。字体按 Unicode 范围切片，浏览器仅加载页面实际用到的部分。
 
 关闭命令行窗口即可退出程序。控制台运行期间再次启动 `启动.bat` 时，程序仅在浏览器中重新打开已有的控制台，不会启动第二个进程。服务仅监听 `127.0.0.1`。
 
@@ -142,7 +142,7 @@ gkmas-delta/
 │  └─ web/                 网页控制台
 ├─ tools/ab_extract.py     抽图后端比对工具
 ├─ tools/build.py          发布包构建脚本
-├─ tools/fetch_fonts.py    Noto 字体下载脚本
+├─ tools/fetch_fonts.py    字体下载脚本
 ├─ python/                 内置解释器（仅发布包包含）
 ├─ bin/                    vgmstream、ffmpeg
 └─ data/
