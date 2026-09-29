@@ -190,6 +190,7 @@ def run(
                 config.unity_version,
                 cli_path=config.assetstudio_path,
                 workers=config.workers,
+                scope=config.extract_scope,
             )
         except UmeError as exc:
             # A missing extraction backend must not lose the downloads or the

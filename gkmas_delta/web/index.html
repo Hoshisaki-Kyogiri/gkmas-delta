@@ -132,6 +132,11 @@ input:focus, select:focus, .btn:focus-visible, nav button:focus-visible { outlin
 .selbar b { font-family: var(--sans); font-weight: 600; }
 .count { color: var(--muted); font-size: 12.5px; margin: 16px 0 8px; }
 .more-row { text-align: center; margin-top: 14px; }
+.pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; margin-top: 14px; }
+.pager .btn { min-width: 36px; justify-content: center; }
+.pager .btn[aria-current="page"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pager .gap { color: var(--muted); padding: 0 2px; }
+.pager input { width: 72px; }
 
 /* ---------- overview ---------- */
 .kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
@@ -583,11 +588,17 @@ body.has-player .task { bottom: 78px; }
       </div>
       <select id="g-char" aria-label="角色"><option value="">全部角色</option></select>
       <input type="search" id="g-q" placeholder="按文件名或路径筛选，例如 costume">
+      <select id="g-size" aria-label="每页张数">
+        <option value="20">每页 20 张</option>
+        <option value="50">每页 50 张</option>
+        <option value="100">每页 100 张</option>
+        <option value="200">每页 200 张</option>
+      </select>
       <button class="btn" id="g-open"><i data-icon="folder"></i>打开文件夹</button>
     </div>
     <div class="count" id="g-count"></div>
     <div class="grid" id="g-grid"></div>
-    <div class="more-row"><button class="btn" id="g-more" hidden>加载更多</button></div>
+    <nav class="pager" id="g-pager" aria-label="翻页" hidden></nav>
   </section>
 
   <!-- ================= 音频 ================= -->
@@ -713,6 +724,12 @@ body.has-player .task { bottom: 78px; }
             <select data-key="extract.backend">
               <option value="unitypy">UnityPy（默认，内置，不用另装东西）</option>
               <option value="assetstudio">AssetStudio（需要 .NET 9 运行时和 AssetStudioModCLI）</option>
+            </select>
+          </label>
+          <label class="field"><span>处理范围</span>
+            <select data-key="extract.scope">
+              <option value="img">只抽 img_ 开头的图片（卡面、立绘、UI 等）</option>
+              <option value="all">全部贴图（含模型、特效、场景材质，全量时数量多好几倍）</option>
             </select>
           </label>
           <label class="field" id="f-asp"><span>AssetStudioModCLI.exe 路径</span>
@@ -1032,7 +1049,7 @@ function renderStatus() {
     hint.textContent = `${S.pending.bundles} 个 Asset / ${S.pending.files} 个 Resource，共 ${size(S.pending.bytes)}`;
   } else if (S && L.has_baseline && !L.app_version_changed && S.server_revision <= L.revision) {
     title.textContent = "已经是最新版本";
-    hint.textContent = `本地和服务器都是 v${L.revision}`;
+    hint.textContent = "";
   } else if (S && L.has_baseline && S.server_revision > L.revision) {
     title.textContent = `v${L.revision} → v${S.server_revision}`;
     hint.textContent = "有新版本，但没有要下载的文件";
@@ -1291,7 +1308,15 @@ function connect() {
 }
 
 // ---------------------------------------------------------------- gallery
-const gal = { revisions: [], revision: 0, source: "png", q: "", card: "", character: "", offset: 0, total: 0, items: [], loading: false };
+const GAL_SIZES = [20, 50, 100, 200];
+const GAL_SIZE_KEY = "gkmas-delta.gallery-size";
+const gal = { revisions: [], revision: 0, source: "png", q: "", card: "", character: "", page: 0, size: 100, total: 0, items: [], loading: false };
+try {
+  const saved = Number(localStorage.getItem(GAL_SIZE_KEY));
+  if (GAL_SIZES.includes(saved)) gal.size = saved;
+} catch { /* storage unavailable */ }
+$("#g-size").value = gal.size;
+const galPages = () => Math.max(1, Math.ceil(gal.total / gal.size));
 let galleryStale = true;
 
 async function loadGallery() {
@@ -1314,7 +1339,7 @@ async function loadGallery() {
       className: "empty-state", style: "grid-column:1/-1",
       textContent: "还没有抽出任何图片。去「控制台」运行一次更新就会出现在这里。",
     }));
-    $("#g-more").hidden = true;
+    $("#g-pager").hidden = true;
     return;
   }
   if (!gal.revisions.some(r => r.revision === gal.revision)) gal.revision = gal.revisions[0].revision;
@@ -1333,25 +1358,32 @@ function syncSource() {
   });
 }
 
-async function queryImages(reset) {
-  if (gal.loading) return;
+// reset = the filters changed: back to page 1 and refresh the character list.
+// Returns false when the request failed or another one was already running.
+async function queryImages(reset, page = 0) {
+  if (gal.loading) return false;
   gal.loading = true;
-  if (reset) { gal.offset = 0; gal.items = []; $("#g-grid").innerHTML = ""; }
+  if (reset) page = 0;
   try {
     const params = new URLSearchParams({
-      revision: gal.revision, source: gal.source, q: gal.q, offset: gal.offset, card: gal.card, character: gal.character,
+      revision: gal.revision, source: gal.source, q: gal.q, card: gal.card, character: gal.character,
+      offset: page * gal.size, limit: gal.size,
     });
     const data = await api("/api/images?" + params);
     gal.total = data.total;
+    // The set may have shrunk since the page count was drawn.
+    if (page > 0 && page >= galPages()) {
+      gal.loading = false;
+      return queryImages(false, galPages() - 1);
+    }
+    gal.page = page;
     if (reset) {
       // Characters found under the other filters; keep the current pick listed.
       const codes = new Set(data.characters);
       if (gal.character) codes.add(gal.character);
       fillSelect($("#g-char"), [...codes].map(c => [c, data.names[c] || c]).sort(byName), "全部角色");
     }
-    const start = gal.items.length;
-    gal.items.push(...data.items);
-    gal.offset = gal.items.length;
+    gal.items = data.items;
     const frag = document.createDocumentFragment();
     data.items.forEach((it, i) => {
       const tile = document.createElement("button");
@@ -1360,24 +1392,70 @@ async function queryImages(reset) {
       tile.innerHTML = `<div class="img"><img loading="lazy" alt=""></div><div class="cap"></div>`;
       $("img", tile).src = "/data/" + it.path.split("/").map(encodeURIComponent).join("/");
       $(".cap", tile).textContent = it.name;
-      tile.addEventListener("click", () => openViewer(start + i));
+      tile.addEventListener("click", () => openViewer(i));
       frag.append(tile);
     });
-    $("#g-grid").append(frag);
+    // Replacing the tiles drops the previous page's images, so memory stays at one page.
+    $("#g-grid").replaceChildren(frag);
     const filters = [
       gal.card && (gal.card === "produce" ? "Produce卡" : "Support卡"),
       gal.character && $("#g-char").selectedOptions[0]?.textContent,
       gal.q && `「${gal.q}」`,
     ].filter(Boolean);
+    const first = gal.page * gal.size + 1;
     $("#g-count").textContent = gal.total
-      ? `v${gal.revision} · 共 ${gal.total} 张${filters.length ? `（${filters.join(" · ")}）` : ""}，已显示 ${gal.items.length}`
+      ? `v${gal.revision} · 共 ${gal.total} 张${filters.length ? `（${filters.join(" · ")}）` : ""}，第 ${first}–${first + gal.items.length - 1} 张`
       : "没有匹配的图片。";
-    $("#g-more").hidden = gal.items.length >= gal.total;
+    renderPager();
+    return true;
   } catch (err) {
     toast(err.message);
+    return false;
   } finally {
     gal.loading = false;
   }
+}
+
+function renderPager() {
+  const pager = $("#g-pager");
+  const pages = galPages();
+  pager.hidden = pages <= 1;
+  if (pager.hidden) return pager.replaceChildren();
+  const cur = gal.page;
+  const button = (label, page, current = false) => {
+    const b = Object.assign(document.createElement("button"), { type: "button", className: "btn", textContent: label });
+    if (current) b.setAttribute("aria-current", "page");
+    b.disabled = page < 0 || page >= pages;
+    b.addEventListener("click", () => goPage(page));
+    return b;
+  };
+  const items = [button("上一页", cur - 1)];
+  // First, last and two either side of the current page; gaps become "…".
+  const shown = [...new Set([0, pages - 1, cur - 2, cur - 1, cur, cur + 1, cur + 2])]
+    .filter(p => p >= 0 && p < pages)
+    .sort((a, b) => a - b);
+  shown.forEach((p, i) => {
+    if (i && p - shown[i - 1] > 1) items.push(Object.assign(document.createElement("span"), { className: "gap", textContent: "…" }));
+    items.push(button(String(p + 1), p, p === cur));
+  });
+  items.push(button("下一页", cur + 1));
+  const jump = Object.assign(document.createElement("input"), {
+    type: "number", min: 1, max: pages, placeholder: "页码", title: `跳到第几页（共 ${pages} 页），回车确认`,
+  });
+  jump.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const n = Math.round(Number(jump.value));
+    if (n >= 1 && n <= pages) goPage(n - 1);
+  });
+  items.push(jump);
+  pager.replaceChildren(...items);
+}
+
+async function goPage(page) {
+  if (page < 0 || page >= galPages() || page === gal.page) return false;
+  const ok = await queryImages(false, page);
+  if (ok && !$("#viewer").open) $("#g-count").scrollIntoView({ block: "start", behavior: "smooth" });
+  return ok;
 }
 
 $("#g-rev").addEventListener("change", e => { gal.revision = Number(e.target.value); syncSource(); queryImages(true); });
@@ -1396,14 +1474,29 @@ $$("#g-card button").forEach(b => b.addEventListener("click", () => {
   queryImages(true);
 }));
 $("#g-char").addEventListener("change", e => { gal.character = e.target.value; queryImages(true); });
-$("#g-more").addEventListener("click", () => queryImages(false));
+$("#g-size").addEventListener("change", e => {
+  // Keep the first image on screen on the new page.
+  const firstIndex = gal.page * gal.size;
+  gal.size = Number(e.target.value);
+  try { localStorage.setItem(GAL_SIZE_KEY, gal.size); } catch { /* storage unavailable */ }
+  queryImages(false, Math.floor(firstIndex / gal.size));
+});
 $("#g-open").addEventListener("click", async () => {
   try { await api("/api/open", { target: "images", revision: gal.revision, source: gal.source }); }
   catch (err) { toast(err.message); }
 });
 
 let viewIndex = 0;
-function openViewer(i) {
+async function openViewer(i) {
+  // Stepping past either end of the page turns the page.
+  if (i < 0 && gal.page > 0) {
+    if (!(await goPage(gal.page - 1))) return;
+    i = gal.items.length - 1;
+  } else if (i >= gal.items.length && gal.page < galPages() - 1) {
+    if (!(await goPage(gal.page + 1))) return;
+    i = 0;
+  }
+  if (!gal.items.length) return;
   viewIndex = Math.max(0, Math.min(i, gal.items.length - 1));
   const it = gal.items[viewIndex];
   const url = "/data/" + it.path.split("/").map(encodeURIComponent).join("/");
@@ -1413,8 +1506,8 @@ function openViewer(i) {
   img.src = url;
   $("#v-name").textContent = it.group && it.group !== "." ? `${it.group}/${it.name}` : it.name;
   $("#v-raw").href = url;
-  $("#v-prev").disabled = viewIndex === 0;
-  $("#v-next").disabled = viewIndex >= gal.items.length - 1;
+  $("#v-prev").disabled = viewIndex === 0 && gal.page === 0;
+  $("#v-next").disabled = viewIndex >= gal.items.length - 1 && gal.page >= galPages() - 1;
   const dlg = $("#viewer");
   if (!dlg.open) dlg.showModal();
 }

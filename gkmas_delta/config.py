@@ -45,6 +45,10 @@ keep_base_copy = false   # 额外写一份汇总副本到 base/，会让磁盘�
 #   "unitypy"     纯 Python，无需额外安装（默认）
 #   "assetstudio" 调用 AssetStudioModCLI.exe，需要机器上装有 .NET 9 运行时
 backend = "unitypy"
+# 处理范围：
+#   "img"  只抽 img_ 开头的 Asset（卡面、立绘、UI 等图片，默认）
+#   "all"  全部贴图，包括模型、特效、场景的材质贴图（全量时数量多出好几倍）
+scope = "img"
 # AssetStudioModCLI.exe 的路径。留空 = 自动在程序目录下查找
 assetstudio_path = ""
 
@@ -68,6 +72,7 @@ class Config:
     convert_webp: bool = True
     keep_base_copy: bool = False
     backend: str = "unitypy"
+    extract_scope: str = "img"
     assetstudio_path: str = ""
     app_version: str = "205100"
     unity_version: str = "6000.0.67f1"
@@ -119,6 +124,13 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
             '只能填 "assetstudio" 或 "unitypy"。',
         )
 
+    extract_scope = str(extract.get("scope", "img")).lower()
+    if extract_scope not in {"img", "all"}:
+        raise ConfigError(
+            f"config.toml 里 scope = \"{extract_scope}\" 不是有效值。",
+            '只能填 "img" 或 "all"。',
+        )
+
     workers = int(download.get("workers", 16))
     if workers < 1:
         raise ConfigError("config.toml 里 workers 至少要是 1。", "建议填 8 到 32 之间。")
@@ -135,6 +147,7 @@ def load_config(path: Path = CONFIG_PATH) -> Config:
         convert_webp=bool(process.get("convert_webp", True)),
         keep_base_copy=bool(process.get("keep_base_copy", False)),
         backend=backend,
+        extract_scope=extract_scope,
         assetstudio_path=str(extract.get("assetstudio_path", "") or "").strip(),
         app_version=str(advanced.get("app_version", "205100")),
         unity_version=str(advanced.get("unity_version", "6000.0.67f1")),
@@ -155,6 +168,7 @@ EDITABLE_FIELDS = {
     ("process", "convert_webp"): bool,
     ("process", "keep_base_copy"): bool,
     ("extract", "backend"): str,
+    ("extract", "scope"): str,
     ("extract", "assetstudio_path"): str,
     ("advanced", "app_version"): str,
     ("advanced", "unity_version"): str,

@@ -58,7 +58,9 @@ SERVABLE_SUFFIXES = IMAGE_SUFFIXES | media.AUDIO_SUFFIXES | media.VIDEO_SUFFIXES
 STREAM_CHUNK = 256 * 1024
 # One download at a time, however many tabs ask.
 _install_lock = threading.Lock()
-GALLERY_PAGE_SIZE = 200
+GALLERY_PAGE_SIZE = 100
+# Page sizes the page may ask for; anything else falls back to the default.
+GALLERY_PAGE_SIZES = {20, 50, 100, 200}
 # Pipeline modes the page may start. None = "whatever the next sensible run is".
 MODES = {"update": None, "latest": "latest", "full": "full", "baseline": "baseline", "from": "from"}
 
@@ -235,18 +237,29 @@ def _gallery_dir(config, revision: int, source: str) -> Path:
     return paths.revision_converted(revision) if source == "webp" else paths.revision_images(revision)
 
 
-def _list_images(config, revision: int, source: str, query: str, offset: int, card: str = "", character: str = "") -> dict:
+def _list_images(
+    config, revision: int, source: str, query: str, offset: int, card: str = "", character: str = "", limit: int = 0
+) -> dict:
+    if limit not in GALLERY_PAGE_SIZES:
+        limit = GALLERY_PAGE_SIZE
     root = _gallery_dir(config, revision, source)
     empty = {"total": 0, "items": [], "characters": [], "names": media.CHARACTERS, "cards": media.CARD_KINDS}
     if not root.is_dir():
         return empty
+    # Every page, search keystroke and filter change asks again; a full
+    # catalogue holds tens of thousands of files, so scan once per TTL.
+    files = media._cached(
+        ("gallery", str(root)),
+        lambda: [
+            (path, path.relative_to(root).as_posix())
+            for path in sorted(root.rglob("*"))
+            if path.suffix.lower() in IMAGE_SUFFIXES
+        ],
+    )
     query = query.lower()
     matched = []
     present = set()
-    for path in sorted(root.rglob("*")):
-        if path.suffix.lower() not in IMAGE_SUFFIXES:
-            continue
-        relative = path.relative_to(root).as_posix()
+    for path, relative in files:
         if query and query not in relative.lower():
             continue
         kind = media.card_kind(path.name)
@@ -270,7 +283,7 @@ def _list_images(config, revision: int, source: str, query: str, offset: int, ca
             "card": kind,
             "character": who,
         }
-        for path, relative, kind, who in matched[offset : offset + GALLERY_PAGE_SIZE]
+        for path, relative, kind, who in matched[offset : offset + limit]
     ]
     return {**empty, "total": len(matched), "items": items, "characters": sorted(present)}
 
@@ -383,6 +396,7 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                             max(0, int(query.get("offset", ["0"])[0])),
                             query.get("card", [""])[0],
                             query.get("character", [""])[0],
+                            int(query.get("limit", ["0"])[0]),
                         )
                     )
                 elif url.path == "/api/audio":

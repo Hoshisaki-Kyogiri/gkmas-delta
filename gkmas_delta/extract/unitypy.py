@@ -92,7 +92,7 @@ def _extract_bundle(bundle_path: Path, output_dir: Path, unity_version: str) -> 
     return written, ""
 
 
-def extract(input_dir: Path, output_dir: Path, unity_version: str, workers: int = 8) -> bool:
+def extract(input_dir: Path, output_dir: Path, unity_version: str, workers: int = 8, only_img: bool = False) -> bool:
     UnityPy = _require_unitypy()
     # These bundles carry no version string, so the fallback is not optional -
     # and it must be set globally before load(), not on the env afterwards.
@@ -105,6 +105,16 @@ def extract(input_dir: Path, output_dir: Path, unity_version: str, workers: int 
     if not bundles:
         warn(f"{input_dir} 下没有找到 .unity3d 文件。")
         return False
+    if only_img:
+        from . import IMG_PREFIX
+
+        skipped = len(bundles)
+        bundles = [b for b in bundles if b.name.startswith(IMG_PREFIX)]
+        skipped -= len(bundles)
+        if skipped:
+            info(f"只抽 {IMG_PREFIX} 开头的 Asset，跳过其余 {skipped} 个（设置里可改为抽全部贴图）。")
+        if not bundles:
+            return False
 
     info(f"UnityPy 抽取贴图：{len(bundles)} 个 Asset -> {output_dir}")
     total_images = 0

@@ -41,8 +41,15 @@ def locate(explicit: str = "") -> Path:
     )
 
 
-def extract(input_dir: Path, output_dir: Path, unity_version: str, cli_path: str = "") -> bool:
+def extract(input_dir: Path, output_dir: Path, unity_version: str, cli_path: str = "", only_img: bool = False) -> bool:
     exe = locate(cli_path)
+    if only_img:
+        # The CLI takes a folder, not a file list; deobfuscation already sorts
+        # bundles into per-type folders, and img_* bundles all land in img/.
+        input_dir = input_dir / "img"
+        if not input_dir.is_dir():
+            info("本次没有 img_ 开头的 Asset，跳过抽图。")
+            return False
     output_dir.mkdir(parents=True, exist_ok=True)
 
     command = [
