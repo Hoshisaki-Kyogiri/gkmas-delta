@@ -62,7 +62,7 @@ python -m gkmas_delta --web
 
 | 请求 | 响应大小 | 内容 |
 |---|---|---|
-| 全量 `list/0` | 4.99 MB | 24709 个 Asset / 21730 个 Resource |
+| 全量 `list/0`（v66） | 约 5.0 MB | 25852 个 Asset / 22418 个 Resource，合计约 65 GB |
 | 自 v44 起 | 33 KB | 185 个 Asset / 122 个 Resource |
 | 自 v45 起 | 12.8 KB | 0 个 Asset / 122 个 Resource |
 | 超过最新版本号 | 54 B | 空清单，附带当前最新版本号 |
@@ -82,7 +82,7 @@ gkmas-delta.bat --web --port 9000      指定控制台端口，默认 8765，被
 gkmas-delta.bat --web --no-browser     启动控制台但不打开浏览器
 gkmas-delta.bat --status               查看本地版本、服务器版本及待更新数量
 gkmas-delta.bat --latest               仅下载最新一个版本的更新内容
-gkmas-delta.bat --full                 下载完整资源（约 63 GB）
+gkmas-delta.bat --full                 下载完整资源（约 65 GB）
 gkmas-delta.bat --baseline             仅记录当前版本号，不下载
 gkmas-delta.bat --force                版本号未变化时也重新处理
 gkmas-delta.bat --workers 24           临时指定下载线程数
@@ -96,7 +96,7 @@ gkmas-delta.bat --local-cache <文件>   使用从设备导出的 octocacheevai
 
 `config.toml` 在首次运行时生成，也可在控制台的「设置」页中修改。常用配置项如下：
 
-- `data_dir`：数据目录，留空时使用程序目录下的 `data/`。完整下载需要 63 GB 以上的空间，系统盘空间不足时可设为其他位置，例如 `"D:/gkmas-data"`。
+- `data_dir`：数据目录，留空时使用程序目录下的 `data/`。完整下载需要约 65 GB 的空间，系统盘空间不足时可设为其他位置，例如 `"D:/gkmas-data"`。
 - `first_run`：命令行模式下首次运行的行为，可选 `"ask"`、`"latest"`、`"full"`、`"baseline"`。
 - `workers`：同时下载的连接数，网络不稳定时可适当调低。
 - `keep_base_copy`：额外保存一份跨版本汇总副本。默认关闭，开启后磁盘占用约增加一倍。

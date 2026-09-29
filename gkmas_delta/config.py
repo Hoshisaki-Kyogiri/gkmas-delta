@@ -17,7 +17,7 @@ DEFAULT_CONFIG_TEXT = """\
 
 [paths]
 # 数据存放位置。留空 = 程序目录下的 data/
-# 全量下载需要 15 GB 以上，C 盘不够就填别的盘，例如 "D:/gkmas-data"
+# 全量下载需要约 65 GB，C 盘不够就填别的盘，例如 "D:/gkmas-data"
 data_dir = ""
 
 [update]

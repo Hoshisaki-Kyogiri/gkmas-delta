@@ -4,7 +4,7 @@ Three ways to pick a manifest:
 
   update  (default)  ask the server for everything changed since our recorded
                      revision. One HTTP call, ~13 KB, only the changed files.
-  full               the entire catalogue (~15 GB of downloads).
+  full               the entire catalogue (~65 GB of downloads).
   baseline           record the current revision without downloading anything,
                      so future runs are incremental from here on.
 

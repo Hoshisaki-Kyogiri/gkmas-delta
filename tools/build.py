@@ -150,7 +150,7 @@ def main() -> int:
     dist.mkdir(parents=True)
 
     python_exe = prepare_interpreter(args.version, dist / "python")
-    install_dependencies(python_exe, ["UnityPy"])
+    install_dependencies(python_exe, [])
     verify(python_exe)
     if not args.keep_pip:
         strip_build_tooling(dist / "python")

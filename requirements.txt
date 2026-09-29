@@ -3,6 +3,4 @@ pycryptodome>=3.20
 rich>=13.0
 protobuf>=4.25
 pillow>=10.0
-
-# 可选：把 config.toml 的 [extract] backend 改成 "unitypy" 时需要
-# UnityPy>=1.20
+UnityPy>=1.20  # 默认的抽图后端
