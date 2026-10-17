@@ -6,7 +6,7 @@
 
 ### Windows 发布包
 
-下载 `gkmas-delta-win64.zip`（约 49 MB），解压后运行 `启动.bat`。发布包内置 Python 3.13、全部依赖、vgmstream 与 Noto 字体，解压后约 96 MB，无需另行安装 Python 或 .NET。
+下载 `gkmas-delta-win64.zip`（约 36 MB），解压后运行 `启动.bat`。发布包内置 Python 3.13、全部依赖、vgmstream 与 Noto 字体，解压后约 83 MB，无需另行安装 Python 或 .NET。
 
 ### 从源码运行
 
