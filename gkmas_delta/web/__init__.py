@@ -5,10 +5,15 @@ without a single extra dependency. The page drives the same pipeline as the CLI;
 everything the pipeline reports through `ui` is mirrored to the browser over
 Server-Sent Events, and the terminal window keeps showing the rich output too.
 
+The page (index.html plus its CSS, scripts, images and fonts in this folder) is
+served at / as plain static files; there is no front-end build step.
+
 Only one job runs at a time: two pipelines writing the same data directory and
 state.json would race each other.
 """
 
+import base64
+import importlib.util
 import json
 import mimetypes
 import os
@@ -50,15 +55,17 @@ from ..ui import (
 DEFAULT_PORT = 8765
 PORT_ATTEMPTS = 20
 PAGE = Path(__file__).with_name("index.html")
-LOGO = Path(__file__).with_name("logo.webp")
-# Noto fonts vendored by tools/fetch_fonts.py; the console works offline.
-FONTS = Path(__file__).with_name("fonts")
+# The page's own CSS, scripts, images and fonts live in this folder as well.
+WEB_ROOT = Path(__file__).parent
+STATIC_SUFFIXES = {".css", ".js", ".png", ".webp", ".jpg", ".jpeg", ".svg", ".ico", ".woff2"}
 IMAGE_SUFFIXES = {".png", ".webp", ".jpg", ".jpeg"}
 # What /data/ may serve: extracted images and browser-playable audio.
 SERVABLE_SUFFIXES = IMAGE_SUFFIXES | media.AUDIO_SUFFIXES | media.VIDEO_SUFFIXES
 STREAM_CHUNK = 256 * 1024
 # One download at a time, however many tabs ask.
 _install_lock = threading.Lock()
+# One folder dialog at a time; the dialog is modal and blocks its request thread.
+_pick_lock = threading.Lock()
 GALLERY_PAGE_SIZE = 100
 # Page sizes the page may ask for; anything else falls back to the default.
 GALLERY_PAGE_SIZES = {20, 50, 100, 200}
@@ -220,6 +227,77 @@ def _reveal_file(path: Path) -> None:
         subprocess.Popen(["xdg-open", str(path.parent)])
 
 
+# Prints the chosen path as base64 of its UTF-8 bytes: a piped console's
+# encoding is the ANSI code page, which can't carry every path.
+_PS_PICKER = """
+$ProgressPreference = 'SilentlyContinue'
+Add-Type -AssemblyName System.Windows.Forms
+$dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+$dialog.Description = '选择数据目录'
+$dialog.SelectedPath = $env:GKMAS_PICK_INITIAL
+$owner = New-Object System.Windows.Forms.Form -Property @{TopMost = $true}
+try {
+    if ($dialog.ShowDialog($owner) -eq 'OK') {
+        [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($dialog.SelectedPath))
+    }
+} finally { $owner.Dispose() }
+"""
+
+
+def _ask_folder(initial: Path) -> str:
+    """A native folder picker in a child process; returns "" when cancelled.
+
+    Tk is not touched from the HTTP handler's thread: Tcl expects one thread,
+    and the dialog has to run its own event loop. The child process keeps the
+    server responsive and isolates a Tk failure from the console.
+    """
+    script = (
+        "import sys, tkinter as tk\n"
+        "from tkinter import filedialog\n"
+        "root = tk.Tk()\n"
+        "root.withdraw()\n"
+        "root.attributes('-topmost', True)\n"
+        "root.update()\n"
+        "try:\n"
+        "    print(filedialog.askdirectory(parent=root, initialdir=sys.argv[1], title='选择数据目录', mustexist=True) or '')\n"
+        "finally:\n"
+        "    root.destroy()\n"
+    )
+    if getattr(sys, "frozen", False):
+        raise UmeError("打包版本无法打开文件夹选择窗口。", "请手动填写数据目录。")
+    if importlib.util.find_spec("tkinter") is not None:
+        command = [sys.executable, "-c", script, str(initial)]
+    elif os.name == "nt":
+        # The release's embedded Python has no tkinter; Windows PowerShell does
+        # have the WinForms folder dialog.
+        command = ["powershell", "-NoProfile", "-NonInteractive", "-STA",
+                   "-EncodedCommand", base64.b64encode(_PS_PICKER.encode("utf-16-le")).decode()]
+    else:
+        raise UmeError("当前 Python 没有 tkinter，无法打开文件夹选择窗口。", "请手动填写数据目录。")
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env={**os.environ, "PYTHONIOENCODING": "utf-8", "GKMAS_PICK_INITIAL": str(initial)},
+            timeout=600,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise UmeError("文件夹选择窗口超时。", "请手动填写数据目录。") from exc
+    except OSError as exc:
+        raise UmeError("无法启动文件夹选择窗口。", "请手动填写数据目录。") from exc
+    if result.returncode != 0:
+        raise UmeError("文件夹选择窗口未能打开。", "请手动填写数据目录。")
+    lines = result.stdout.strip().splitlines()
+    if not lines:
+        return ""
+    if command[0] == "powershell":
+        return base64.b64decode(lines[-1]).decode("utf-8")
+    return lines[-1]
+
+
 def _revision_dirs(config) -> list:
     """Every revision that has extracted images, newest first."""
     paths = config.paths
@@ -372,8 +450,6 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
             try:
                 if url.path in ("/", "/index.html"):
                     self._serve_file(PAGE, cache=False)
-                elif url.path == "/logo.webp":
-                    self._serve_file(LOGO, max_age=86400)
                 elif url.path == "/api/ping":
                     self._send_json({"app": "gkmas-delta", "version": __version__})
                 elif url.path == "/api/state":
@@ -428,12 +504,10 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                     self._send_json({"results": results})
                 elif url.path == "/api/events":
                     self._stream_events()
-                elif url.path.startswith("/fonts/"):
-                    self._serve_font(unquote(url.path[len("/fonts/") :]))
                 elif url.path.startswith("/data/"):
                     self._serve_data(unquote(url.path[len("/data/") :]))
                 else:
-                    self.send_error(HTTPStatus.NOT_FOUND)
+                    self._serve_static(unquote(url.path))
             except UmeError as exc:
                 self._send_error(exc)
             except ValueError:
@@ -468,6 +542,8 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                 elif url.path == "/api/open":
                     self._open(body)
                     self._send_json({"ok": True})
+                elif url.path == "/api/pick-folder":
+                    self._send_json({"path": self._pick_folder(str(body.get("initial") or ""))})
                 elif url.path == "/api/decode":
                     paths = self._config().paths
                     cues = media.decode_bank(paths, str(body.get("file", "")))
@@ -524,6 +600,18 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                 _open_folder(_gallery_dir(config, revision, source) if revision else config.paths.images)
             else:
                 raise UmeError(f"未知的目录：{target}")
+
+        def _pick_folder(self, initial: str) -> str:
+            config = self._config()
+            start = Path(initial).expanduser() if initial.strip() else config.paths.data_dir
+            if not start.is_dir():
+                start = config.paths.data_dir if config.paths.data_dir.is_dir() else Path.home()
+            if not _pick_lock.acquire(blocking=False):
+                raise UmeError("已经有一个文件夹选择窗口打开了。", "先完成或关闭那个窗口。")
+            try:
+                return _ask_folder(start)
+            finally:
+                _pick_lock.release()
 
         def _media_request(self, body: dict) -> tuple:
             kind = body.get("kind")
@@ -598,17 +686,21 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                     self.wfile.write(chunk)
                     remaining -= len(chunk)
 
-        def _serve_font(self, relative: str) -> None:
-            root = FONTS.resolve()
-            target = (root / relative).resolve()
-            if not target.is_relative_to(root) or target.suffix not in (".woff2", ".css") or not target.is_file():
+        def _serve_static(self, path: str) -> None:
+            """The page's own CSS, scripts, images and fonts.
+
+            /data/ never comes from here, and files under this folder that are
+            not page assets (Python modules) are never served.
+            """
+            root = WEB_ROOT.resolve()
+            target = (root / path.lstrip("/")).resolve()
+            if not target.is_relative_to(root) or target.suffix.lower() not in STATIC_SUFFIXES or not target.is_file():
                 self.send_error(HTTPStatus.NOT_FOUND)
                 return
-            # fonts.css changes when a family is added; the .woff2 slices it points at don't.
-            if target.suffix == ".css":
+            if target.suffix.lower() in (".css", ".js"):
                 self._serve_file(target, cache=False)
             else:
-                self._serve_file(target, max_age=31536000)
+                self._serve_file(target, max_age=86400)
 
         def _serve_data(self, relative: str) -> None:
             root = self._config().paths.data_dir.resolve()
@@ -657,23 +749,44 @@ class _Server(ThreadingHTTPServer):
         super().server_bind()
 
 
-def _existing_console(port: int) -> bool:
-    """True when our own console already answers on this port."""
+def _console_config(port: int):
+    """The config path a gkmas-delta console on this port reports, else None."""
     try:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/ping", timeout=1) as response:
-            return json.load(response).get("app") == "gkmas-delta"
+            if json.load(response).get("app") != "gkmas-delta":
+                return None
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/config", timeout=1) as response:
+            path = json.load(response).get("path")
+            return path if isinstance(path, str) and path else None
     except Exception:
-        return False
+        return None
 
 
-def _bind(handler, port: int | None):
+def _same_installation(running: str, config_path: Path) -> bool:
+    left = os.path.normcase(os.path.abspath(running))
+    right = os.path.normcase(str(config_path.resolve()))
+    return left == right
+
+
+def _bind(handler, port: int | None, config_path: Path):
     candidates = [port] if port else range(DEFAULT_PORT, DEFAULT_PORT + PORT_ATTEMPTS)
     for candidate in candidates:
         try:
             return _Server(("127.0.0.1", candidate), handler)
         except OSError:
-            if _existing_console(candidate):
+            running = _console_config(candidate)
+            if running is None:
+                continue
+            # Only this installation may share its own console; another copy
+            # (its own config.toml and data directory) must not swallow us.
+            if _same_installation(running, config_path):
                 return candidate
+            if port:
+                raise UmeError(
+                    f"端口 {candidate} 已被另一份 gkmas-delta 占用。",
+                    "用 --port 指定另一个端口，例如 --port 9000；或先关闭那个控制台。",
+                )
+            info(f"端口 {candidate} 已被另一份 gkmas-delta 占用（{running}），改用下一个端口。")
     raise UmeError(
         "找不到可用的端口来启动网页控制台。",
         "用 --port 指定一个没被占用的端口，例如 --port 9000。",
@@ -688,7 +801,7 @@ def serve(config_path: Path, port: int | None = None, open_browser: bool = True)
     jobs = JobRunner(config_path)
     add_listener(hub.publish)
 
-    server = _bind(make_handler(config_path, hub, jobs), port)
+    server = _bind(make_handler(config_path, hub, jobs), port, config_path)
     if isinstance(server, int):
         # A second double-click just brings the running console to the front;
         # two pipelines on one data directory would corrupt each other's state.

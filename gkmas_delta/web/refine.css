@@ -1,0 +1,227 @@
+/* Refinements on top of gakuen.css and type.css; loaded last.
+
+   - Scale contrast: one oversized figure per page, bolder page titles, the
+     breadcrumb row folded into the heading.
+   - The official site's voice: bilingual navigation, a large outlined Latin
+     word behind each page title, a small sparkle mark.
+   - One solid colour block: the overview status band (official geometric
+     pattern, duotoned) and the active navigation item.
+   - Two corner sizes instead of ten; filters and reader controls are plain
+     text with hairline dividers; only real actions keep a button shape.
+   - Card titles are file names; Japanese typefaces for story text; dropdown
+     lists drawn by the page where the browser allows it.
+
+   Selectors start with :root[data-style] so they outrank the
+   html[data-style=gakuen] rules they refine. */
+
+/* Comfortaa 700 with overlapping contours merged, so outline-only text draws
+   a single clean edge (the variable Quicksand showed every internal joint). */
+@font-face{font-family:"Delta Outline";font-weight:700;font-display:swap;src:url(assets/fonts/delta-outline/delta-outline-700.woff2) format("woff2")}
+
+:root[data-style]{
+  --ink:#2f2a3a;
+  --band:#605c96;            /* white text 5.9:1 */
+  --band-text:#efeef8;       /* small labels on the band, 5.2:1 */
+  --outline:#d9d4ea;
+  --cut-s:12px;              /* opposite-corner curve: things you click */
+  --cut-l:24px;              /* opposite-corner curve: large panels */
+  --radius:4px;              /* everything else */
+  --chevron:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23746d80' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 4.5 3 3 3-3'/%3E%3C/svg%3E");
+  --pattern:url("assets/band-pattern.webp") 0 0/600px;  /* official geometric pattern, duotoned to the band colours */
+  --sparkle:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='%23706caa' d='M8 0C8 5 11 8 16 8 11 8 8 11 8 16 8 11 5 8 0 8 5 8 8 5 8 0Z'/%3E%3C/svg%3E");
+}
+
+/* English names, shared by the navigation and the outlined page word. */
+:root[data-style]:has(nav a[data-page=overview][aria-current=page]){--page-en:"Overview"}
+:root[data-style]:has(nav a[data-page=images][aria-current=page]){--page-en:"Images"}
+:root[data-style]:has(nav a[data-page=audio][aria-current=page]){--page-en:"Audio"}
+:root[data-style]:has(nav a[data-page=video][aria-current=page]){--page-en:"Video"}
+:root[data-style]:has(nav a[data-page=story][aria-current=page]){--page-en:"Story"}
+:root[data-style]:has(nav a[data-page=settings][aria-current=page]){--page-en:"Settings"}
+:root[data-style] nav a[data-page=overview]{--en:"Overview"}
+:root[data-style] nav a[data-page=images]{--en:"Images"}
+:root[data-style] nav a[data-page=audio]{--en:"Audio"}
+:root[data-style] nav a[data-page=video]{--en:"Video"}
+:root[data-style] nav a[data-page=story]{--en:"Story"}
+:root[data-style] nav a[data-page=settings]{--en:"Settings"}
+
+/* ---- navigation: bilingual labels, the current page filled -------------- */
+:root[data-style] nav a{display:grid;grid-template-columns:16px minmax(0,1fr) auto;column-gap:12px;align-items:center;padding:9px 12px;line-height:1.35;color:var(--ink)}
+:root[data-style] nav a .nav-i{grid-row:1/3;color:var(--muted)}
+:root[data-style] nav a::after{content:var(--en);grid-column:2;grid-row:2;font:500 10px/1.5 var(--brand-font);letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+:root[data-style] nav a .nav-arrow{grid-column:3;grid-row:1/3}
+:root[data-style] nav a[aria-current=page]{background:var(--accent);border-color:var(--accent);color:#fff}
+:root[data-style] nav a[aria-current=page] .nav-i,
+:root[data-style] nav a[aria-current=page] .nav-arrow{color:#fff}
+:root[data-style] nav a[aria-current=page]::after{color:var(--band-text)}
+
+/* ---- the breadcrumb row is folded into the heading ---------------------- */
+:root[data-style] .topbar{height:0;min-height:0;padding:0;border:0;position:relative}
+:root[data-style] .breadcrumb{display:none}
+:root[data-style] .top-tools{position:absolute;right:0;top:22px;z-index:2;width:auto}
+
+/* ---- page heading: a large title over an outlined English word ---------- */
+:root[data-style] .page-heading{position:relative;isolation:isolate;clip-path:inset(-40px -40px 0 -40px);padding:46px 0 20px;margin-bottom:30px;border-bottom:1px solid var(--ink)}
+:root[data-style] .page-heading::after{content:var(--page-en,"");position:absolute;right:-6px;bottom:-.3em;z-index:-1;pointer-events:none;white-space:nowrap;font:700 132px/1 "Delta Outline",var(--brand-font);letter-spacing:-.035em;color:transparent;-webkit-text-stroke:1.2px var(--outline)}
+:root[data-style] .page-heading h1{position:relative;font-size:42px;font-weight:600;letter-spacing:.06em;line-height:1.15;color:var(--ink);gap:18px}
+:root[data-style] .page-heading h1:before{width:5px;height:38px}
+:root[data-style] .page-heading h1:after{content:"";position:absolute;left:-12px;top:-14px;width:14px;height:14px;background:var(--sparkle) center/contain no-repeat}
+
+/* ---- overview status band ------------------------------------------------ */
+:root[data-style] .stats{grid-template-columns:minmax(0,1.8fr) repeat(3,minmax(0,1fr));align-items:end;padding:28px 0 26px;border:0;background:var(--pattern),var(--band);color:#fff;margin-bottom:30px}
+:root[data-style] .stat{border-right-color:#ffffff38;padding:0 24px}
+:root[data-style] .stat:first-child{padding-left:28px}
+:root[data-style] .stat-label{color:var(--band-text);font-size:12px;letter-spacing:.08em}
+:root[data-style] .stat-value{color:#fff;font-size:25px;margin-top:4px}
+:root[data-style] .stat:first-child .stat-value{font:500 104px/.92 var(--brand-font);letter-spacing:-.035em;margin-top:14px}
+:root[data-style] .stat-value small{color:var(--band-text)}
+
+/* ---- section titles and secondary figures -------------------------------- */
+:root[data-style] .section-title{font-size:15px;font-weight:600;letter-spacing:.1em;color:var(--ink)}
+:root[data-style] .update-box h3{font-size:24px;font-weight:500}
+:root[data-style] .resource-count{font:500 24px var(--brand-font);font-variant-numeric:tabular-nums}
+
+/* ---- corners: the diagonal curve is kept for entry points and large panels;
+        small controls and secondary boxes share one plain radius ----------- */
+:root[data-style] nav a,
+:root[data-style] .btn{border-radius:0 var(--cut-s) 0 var(--cut-s)}
+:root[data-style] .stats,
+:root[data-style] .update-box,
+:root[data-style] .resource-links,
+:root[data-style] .music-feature,
+:root[data-style] dialog{border-radius:0 var(--cut-l) 0 var(--cut-l)}
+:root[data-style] .stat-badge,
+:root[data-style] .table-button,
+:root[data-style] .setting-note,
+:root[data-style] .live-notice,
+:root[data-style] input[type=search],
+:root[data-style] input[type=text],
+:root[data-style] input[type=number],
+:root[data-style] select{border-radius:var(--radius)}
+
+/* ---- image cards: the version tag always equals the version filter, and
+        "根目录" is the default folder, so neither tells cards apart ---------- */
+:root[data-style] .gallery-grid .thumb-num,
+:root[data-style] .card-group.is-root{display:none}
+
+/* ---- story text is Japanese: use Japanese typefaces so kanji take Japanese
+        forms instead of the Simplified Chinese ones in Noto Sans SC -------- */
+:root[data-style] .story-body[lang=ja]{
+  --sans:"Noto Sans JP","BIZ UDPGothic","Yu Gothic UI","Yu Gothic","Meiryo",sans-serif;
+  --serif:"Noto Serif JP","BIZ UDPMincho","Yu Mincho","YuMincho",serif;
+}
+
+/* ---- overview: the server is checked on load and after every update -------- */
+:root[data-style] #refresh-server{display:none}
+
+/* ---- text controls: words separated by hairlines, the current one in the
+        accent colour. Used for filter tabs and every story-reader control --- */
+:root[data-style] .tabs,
+:root[data-style] .live-parts,
+:root[data-style] .reader-tools,
+:root[data-style] .live-reader .live-form-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px 0}
+:root[data-style] .tabs button,
+:root[data-style] .live-parts .table-button,
+:root[data-style] .reader-tools button,
+:root[data-style] #story-play-all{min-height:0;padding:1px 14px;border:0;border-radius:0;background:none;color:var(--muted);font-size:14px;line-height:1.3;font-weight:400}
+:root[data-style] .tabs button+button,
+:root[data-style] .live-parts .table-button+.table-button,
+:root[data-style] .reader-tools button+button,
+:root[data-style] .live-reader .live-form-actions>label{border-left:1px solid var(--line)}
+:root[data-style] .tabs button:first-child,
+:root[data-style] .live-parts .table-button:first-child,
+:root[data-style] #story-play-all{padding-left:0}
+:root[data-style] .reader-tools button:last-child{padding-right:0}
+:root[data-style] .tabs button:hover,
+:root[data-style] .live-parts .table-button:hover,
+:root[data-style] .reader-tools button:hover{background:none;color:var(--ink)}
+:root[data-style] .tabs button[aria-pressed=true],
+:root[data-style] .live-parts .table-button[aria-pressed=true],
+:root[data-style] .reader-tools .active{background:none;color:var(--accent-text);font-weight:600}
+:root[data-style] .tabs-source{padding-left:0;margin-left:14px;border-left:0}
+:root[data-style] .tabs-source:before{content:"";width:4px;height:4px;border-radius:50%;background:var(--secondary);margin-right:14px}
+:root[data-style] #story-play-all{color:var(--accent-text);padding-right:14px}
+:root[data-style] #story-play-all:before{content:"▶";font-size:.7em;margin-right:7px;vertical-align:.12em}
+:root[data-style] #story-play-all:disabled{color:var(--muted)}
+:root[data-style] .live-reader .live-form-actions>label{padding-left:14px;display:inline-flex;align-items:center;gap:6px}
+:root[data-style] .live-reader .live-form-actions input{accent-color:var(--accent)}
+:root[data-style] .live-reader .live-form-actions{margin-bottom:26px}
+:root[data-style] .live-reader .voice-button{border:0;border-radius:0;background:none;padding:0;margin-top:2px;color:var(--accent-text)}
+:root[data-style] .live-reader .voice-button:before{content:"▶";font-size:.7em;margin-right:5px;vertical-align:.12em}
+:root[data-style] .live-reader .voice-button:hover{color:var(--ink)}
+
+/* ---- toolbars: search fields and selects drawn as a single underline ----- */
+:root[data-style] .live-tools{gap:10px 22px;align-items:flex-end}
+:root[data-style] .live-tools input[type=search],
+:root[data-style] .live-tools select{height:34px;border:0;border-bottom:1px solid var(--line);border-radius:0;background-color:transparent}
+:root[data-style] .live-tools input[type=search]:focus,
+:root[data-style] .live-tools select:focus{border-bottom-color:var(--accent);outline:0}
+:root[data-style] .live-tools .search-wrap:before{left:0}
+:root[data-style] .live-tools input[type=search]{padding-left:24px}
+:root[data-style] .live-tools select{appearance:none;-webkit-appearance:none;padding:0 20px 0 0;background:var(--chevron) right 2px center/12px no-repeat;flex:0 1 auto;min-width:96px;color:var(--ink);cursor:pointer}
+:root[data-style] .live-tools .btn{min-height:34px;padding:0 2px;border:0;border-bottom:1px solid var(--accent);border-radius:0;background:none;color:var(--accent-text);box-shadow:none}
+:root[data-style] .live-tools .btn:hover{color:var(--ink);border-bottom-color:var(--ink)}
+
+/* ---- story list: a tinted row for the current story, no side bar ---------- */
+:root[data-style] .story-item{border-radius:0;margin:0;border-left:0}
+:root[data-style] .story-item.active{border-left:0;background:var(--accent-soft)}
+:root[data-style] .story-item.active b{color:var(--accent-text);font-weight:600}
+:root[data-style] .story-item:not(.active):hover{background:var(--soft)}
+:root[data-style] .live-story-list .story-item b{font-size:15px;margin:0 0 4px}
+:root[data-style] .live-story-list .story-item small{font-size:13px}
+
+/* ---- image and video cards: the file name is the title ------------------- */
+:root[data-style] .gallery-grid .archive-card h3{display:none}
+:root[data-style] .gallery-grid .card-meta{margin-top:9px;gap:3px}
+:root[data-style] .gallery-grid .card-meta .file-name{font:400 13px/1.5 var(--sans);color:var(--ink);white-space:normal;overflow-wrap:anywhere;max-width:none}
+:root[data-style] .gallery-grid .archive-card:hover .file-name{color:var(--accent-text)}
+:root[data-style] .gallery-grid.list .card-meta{margin-top:0}
+:root[data-style] .gallery-grid.list .card-meta .file-name{font-size:14px}
+:root[data-style] .gallery-grid.list .video-card .thumb{aspect-ratio:16/9;height:auto}
+
+/* ---- grid / list switch: two icons and a hairline, no boxes -------------- */
+:root[data-style] .layout-toggle{display:flex;align-items:center}
+:root[data-style] .view-button{width:auto;height:20px;padding:0 10px;border:0;border-radius:0;background:none;color:var(--muted)}
+:root[data-style] .view-button+.view-button{border-left:1px solid var(--line)}
+:root[data-style] .view-button:last-child{padding-right:0}
+:root[data-style] .view-button:hover{color:var(--ink)}
+:root[data-style] .view-button.active{background:none;color:var(--accent)}
+
+/* ---- primary buttons: a flat fill, without the inset white line ---------- */
+:root[data-style] .btn-primary{box-shadow:none}
+:root[data-style] .btn-primary:hover{background:var(--accent-hover)}
+
+/* ---- dropdown lists: drawn by the page instead of the system, so the open
+        list uses the interface font and colours. Browsers without
+        customizable <select> (appearance: base-select) keep the native list. */
+@supports (appearance: base-select){
+  :root[data-style] select,
+  :root[data-style] select::picker(select){appearance:base-select}
+  :root[data-style] select{display:inline-flex;align-items:center;padding:0 30px 0 10px;background:#fff var(--chevron) right 10px center/12px no-repeat;font:400 13px/1.4 var(--sans);color:var(--ink);cursor:pointer}
+  :root[data-style] .live-tools select{appearance:base-select;padding:0 20px 0 0;background:transparent var(--chevron) right 2px center/12px no-repeat}
+  :root[data-style] select::picker-icon{display:none}
+  :root[data-style] select:open{border-color:var(--accent)}
+  :root[data-style] select::picker(select){margin:4px 0;padding:6px 0;min-width:max(anchor-size(width),160px);max-height:min(540px,70vh);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--tertiary) transparent;border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:0 10px 28px #2f2a3a1f}
+  :root[data-style] select option{padding:8px 16px;font:400 14px/1.4 var(--sans);color:var(--ink);background:none;cursor:pointer;white-space:nowrap}
+  :root[data-style] select option:hover,
+  :root[data-style] select option:focus-visible{background:var(--soft);outline:0}
+  :root[data-style] select option:checked{color:var(--accent-text);font-weight:600}
+  :root[data-style] select option::checkmark{display:none}
+  :root[data-style] select option:checked::before{content:"";width:4px;height:4px;border-radius:50%;background:var(--accent);margin:0 8px 0 -12px;align-self:center}
+}
+
+@media(max-width:820px){
+  :root[data-style] nav a::after{display:none}
+  :root[data-style] nav a{display:flex}
+  :root[data-style] .page-heading::after{font-size:104px}
+}
+@media(max-width:620px){
+  :root[data-style] .page-heading{padding-top:34px}
+  :root[data-style] .page-heading h1{font-size:30px}
+  :root[data-style] .page-heading h1:before{height:28px}
+  :root[data-style] .page-heading::after{font-size:76px}
+  :root[data-style] .stats{grid-template-columns:1fr 1fr}
+  :root[data-style] .stat:first-child{grid-column:1/-1;border:0;padding-left:16px}
+  :root[data-style] .stat:first-child .stat-value{font-size:72px}
+  :root[data-style] .stat{padding:0 16px}
+}

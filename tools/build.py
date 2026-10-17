@@ -130,7 +130,8 @@ def copy_app(dest: Path) -> None:
             raise SystemExit(f"缺少 {item}")
         target = dest / item
         if source.is_dir():
-            shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            # assets/demo holds local-only sample art for ?demo=1; it is not ours to ship.
+            shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "demo"))
         else:
             shutil.copy2(source, target)
     log(f"已复制程序文件：{', '.join(APP_ITEMS)}")

@@ -7,6 +7,9 @@ build/
 dist/
 *.zip
 
+# 演示模式（?demo=1）用的游戏截图素材，只留在本地，不随仓库与发布包分发
+gkmas_delta/web/assets/demo/
+
 # 验证产物
 ab_out/
 

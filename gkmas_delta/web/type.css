@@ -1,0 +1,121 @@
+/* Type scale for the 学园 interface.
+   The original page set a 13px base; this file raises the reading sizes one
+   step (+2px on body copy, +1px on captions) and keeps the scale consistent:
+   15 body / 13 copy / 12 caption / 27 page title / 16 section title. */
+
+:root {
+  --fs-body: 15px;
+  --fs-copy: 13px;
+  --fs-small: 12px;
+  --fs-h1: 27px;
+  --fs-section: 16px;
+  --fs-stat: 31px;
+}
+
+body { font-size: var(--fs-body); line-height: 1.7; }
+.mono { font-size: var(--fs-small); }
+
+/* top bar and sidebar */
+.brand, html[data-style=gakuen] .brand { font-size: 26px; }
+.sidebar > .brand { margin-bottom: 34px; }
+html[data-style=gakuen] .sidebar > nav { margin-top: 0; }
+.side-caption, html[data-style=gakuen] .side-caption { font-size: var(--fs-small); }
+nav a, html[data-style=gakuen] nav a { font-size: 14px; }
+.breadcrumb { font-size: var(--fs-small); }
+.demo-label { font-size: 11px; }
+.help-button { font-size: 13px; }
+.side-bottom { font-size: 11px; }
+footer { font-size: 10px; }
+
+/* headings and overview */
+.page-heading h1, html[data-style=gakuen] .page-heading h1 { font-size: var(--fs-h1); }
+html[data-style=gakuen] .page-heading h1:before { height: 22px; }
+.page-heading p { font-size: var(--fs-copy); }
+.section-title, html[data-style=gakuen] .section-title { font-size: var(--fs-section); }
+.stat-label { font-size: var(--fs-copy); }
+.stat-value, html[data-style=gakuen] .stat-value { font-size: var(--fs-stat); }
+.update-top { font-size: var(--fs-small); }
+.update-tag, html[data-style=gakuen] .update-tag { font-size: var(--fs-small); }
+.update-box p { font-size: var(--fs-copy); }
+.update-box h3, html[data-style=gakuen] .update-box h3 { font-size: 22px; }
+.resource-link b { font-size: 15px; }
+.resource-link small { font-size: var(--fs-small); }
+.resource-count { font-size: 17px; }
+.resource-count small { font-size: 11px; }
+.heading-inline > .muted { font-size: var(--fs-small); }
+.live-note { font-size: var(--fs-copy); }
+.live-path { font-size: var(--fs-copy); }
+.live-notice { font-size: var(--fs-copy); }
+.live-empty { font-size: 14px; }
+.live-placeholder { font-size: var(--fs-copy); }
+
+/* buttons, tabs and form controls */
+.btn, html[data-style=gakuen] .btn { font-size: 13px; }
+.btn .arrow { font-size: 18px; }
+.text-link, .update-actions .text-link, html[data-style=gakuen] .update-actions .text-link { font-size: 13px; }
+.tabs button, html[data-style=gakuen] .tabs button { font-size: 13px; }
+.view-button { display: inline-grid; place-items: center; padding: 0; line-height: 0; }
+.view-button svg { width: 14px; height: 14px; display: block; fill: currentColor; }
+.result-bar { font-size: var(--fs-small); }
+input[type=search], select, input[type=text], input[type=number] { font-size: 13px; }
+.live-tools input[type=search], .live-toolbar select { font-size: 13px; }
+.field > span, .live-settings .field > span { font-size: 13px; }
+.field small, .live-settings .field small { font-size: var(--fs-small); }
+.toggle-row, .live-settings .toggle-row { font-size: 13px; }
+.toggle-row small { font-size: var(--fs-small); }
+.live-settings input, .live-settings select { font-size: 13px; }
+
+/* tables and cards */
+.media-table, .live-media-table td { font-size: 13px; }
+.media-table th, .live-media-table th, html[data-style=gakuen] .media-table th { font-size: var(--fs-small); }
+.media-name b { font-size: 14px; }
+.media-name .mono, .live-media-table .mono { font-size: var(--fs-small); }
+.table-button { font-size: var(--fs-small); }
+.archive-card h3, .gallery-grid .archive-card h3, html[data-style=gakuen] .gallery-grid .archive-card h3 { font-size: 14px; }
+.archive-card .card-meta, .gallery-grid .card-meta { font-size: 11px; }
+.thumb-num, html[data-style=gakuen] .thumb-num { font-size: 11px; }
+.story-item b { font-size: 14px; }
+.story-item small { font-size: var(--fs-small); }
+.live-pager { font-size: 13px; }
+
+/* story reader */
+.reader h2, html[data-style=gakuen] .reader h2, .live-reader h2 { font-size: 28px; }
+.story-body { font-size: 20px; }
+.speaker, .live-reader .speaker { font-size: var(--fs-copy); }
+.reader-tools button { font-size: var(--fs-small); }
+.reader .story-sub, .story-foot { font-size: var(--fs-small); }
+.voice-button, .live-reader .voice-button { font-size: var(--fs-small); }
+
+/* dialogs and settings */
+.detail-heading, .live-details .detail-heading { font-size: 26px; }
+.detail-data dt { font-size: var(--fs-small); }
+.detail-data dd, .live-details dd { font-size: var(--fs-copy); }
+.setting-section h2, html[data-style=gakuen] .setting-section h2 { font-size: 17px; }
+.setting-note { font-size: var(--fs-copy); }
+.setting-note .mono { font-size: var(--fs-small); }
+#toast { font-size: var(--fs-copy); }
+
+/* log and job detail */
+.log-line { font-size: 15px; }
+.log-line > span, .live-log .log-line > span { font-size: 13px; }
+.live-jobs .progress-top { font-size: var(--fs-small); }
+.pipeline-step, .live-jobs .pipeline-step { font-size: var(--fs-small); }
+.step-circle { font-size: 10px; }
+.legend, .live-jobs .legend { font-size: var(--fs-small); }
+
+/* A readable step down on narrow screens, where every column is tight. */
+@media (max-width: 820px) {
+  .brand, html[data-style=gakuen] .brand { font-size: 22px; }
+  .sidebar > .brand { margin-bottom: 18px; }
+}
+
+@media (max-width: 620px) {
+  body { font-size: 14px; }
+  .page-heading h1, html[data-style=gakuen] .page-heading h1 { font-size: 24px; }
+  .section-title, html[data-style=gakuen] .section-title { font-size: 15px; }
+  .stat-value, html[data-style=gakuen] .stat-value { font-size: 28px; }
+  .media-table, .live-media-table td { font-size: 12px; }
+  .media-table th, .live-media-table th { font-size: 11px; }
+  .log-line { font-size: 14px; }
+  .story-body { font-size: 18px; }
+}

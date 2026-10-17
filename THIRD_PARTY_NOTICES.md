@@ -83,8 +83,16 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 用于将 CRI 格式的 `.usm` 视频转换为 mp4。该程序不随发布包分发，仅在首次通过控制台打开视频时下载至 `bin/ffmpeg/`。此构建包含 libx264，以 GPL 协议发布，源代码见 https://ffmpeg.org/download.html 。
 
-## Noto 与 Quicksand 字体
+## Noto Sans SC 与 Quicksand 字体
 
-来源：Google Noto Fonts 与 Quicksand（The Quicksand Project Authors），均采用 Fontsource 5.3.0 的可变字重版本（https://fontsource.org/ ），位于 `gkmas_delta/web/fonts/`，由 `tools/fetch_fonts.py` 生成。
+来源：Google Noto Fonts 与 Quicksand（The Quicksand Project Authors），均采用 Fontsource 5.3.0 的可变字重版本（https://fontsource.org/ ），位于 `gkmas_delta/web/assets/fonts/`，由 `tools/fetch_fonts.py` 生成。
 
-包括 Noto Sans SC、Noto Sans JP、Noto Serif JP、Noto Sans Mono 与 Quicksand，以 SIL Open Font License 1.1 协议分发，许可证全文见各字体文件夹中的 `LICENSE`。
+以 SIL Open Font License 1.1 协议分发，许可证全文见各字体文件夹中的 `LICENSE`。
+
+## Delta Outline 字体
+
+由 Comfortaa（Copyright 2011 The Comfortaa Project Authors，https://github.com/googlefonts/comfortaa ）修改而来：固定为 700 字重，仅保留拉丁字母，合并重叠轮廓，加宽小写 `r`。按 SIL Open Font License 1.1 的保留字体名条款，修改版改名为 Delta Outline。位于 `gkmas_delta/web/assets/fonts/delta-outline/`，许可证全文见同目录的 `LICENSE`，修改说明见 `README.txt`。
+
+## 官方纹样素材
+
+`gkmas_delta/web/assets/band-pattern.webp` 由《学园偶像大师》官方发布的制服几何纹样素材缩放并做双色调处理而成，仅用作界面底纹，版权归 BNEI / QualiArts 等原权利人所有，不适用本项目的 AGPL-3.0 协议。
