@@ -60,11 +60,31 @@ function renderJob(){const box=$('#update-panel');if(!box)return;const p=pending
  const status=S.job?taskLabel():S.checking?'正在检查更新':S.remote?(hasPending?'发现可更新内容':'本地资源已是最新版本'):last?({ok:'任务完成',cancelled:'任务已取消',failed:'任务存在失败文件',error:'任务出错'}[last.result]||'任务已结束'):'尚未检查更新';
  const progress=S.progress,percent=progress?.total?Math.max(0,Math.min(100,progress.completed/progress.total*100)):null;
  box.innerHTML=`<div class="update-box"><div class="update-top"><span class="muted">${S.job?'任务进行中':'本地资源更新'}</span><span class="update-tag">${esc(S.steps.at(-1)||'')}</span></div><h3>${status}</h3><p>${p?`Asset ${p.bundles} 个 · Resource ${p.files} 个 · ${size(p.bytes)}`:S.checking?'正在查询服务器版本和更新清单。':S.remoteError?'未获取到待更新清单。':!S.local?.has_baseline?'没有本地版本记录，请选择首次获取方式。':'点击检查服务器版本获取待更新内容。'}</p>
- <div class="update-actions">${S.job?'<button class="btn btn-primary" id="cancel-job">取消当前任务 ×</button>':firstRun?`<form id="first-run-actions" class="first-run-actions"><label for="first-run-mode">更新方式</label><select id="first-run-mode" name="mode">${updateModeOptions('latest')}</select><input id="first-run-start" name="start" type="number" min="1" value="1" aria-label="起点版本" hidden><button class="btn btn-primary" type="submit">执行所选操作 ↗</button></form>`:S.checking?'<button class="btn btn-primary" disabled>正在检查更新…</button>':!S.remote?'<button class="btn btn-primary" id="check-update">检查更新 ↗</button><button class="text-link" id="other-actions">其他更新方式 ↗</button>':hasPending?'<button class="btn btn-primary" id="start-update">开始更新 ↗</button><button class="text-link" id="check-update">重新检查 ↻</button><button class="text-link" id="other-actions">其他更新方式 ↗</button>':'<button class="btn btn-primary" id="check-update">重新检查 ↻</button><button class="text-link" id="other-actions">其他更新方式 ↗</button>'}</div>
+ <div class="update-actions">${S.job?'<button class="btn btn-primary" id="cancel-job">取消当前任务 ×</button>':firstRun?`<form id="first-run-actions" class="first-run-actions"><label for="first-run-mode">更新方式</label><select id="first-run-mode" name="mode">${updateModeOptions('latest')}</select><input id="first-run-start" name="start" type="number" min="1" value="1" aria-label="起点版本" hidden><button class="btn btn-primary" type="submit">执行所选操作 ↗</button><div class="first-run-preview"><button class="text-link" id="first-run-preview" type="button">预览下载范围 ↗</button><span id="first-run-preview-result" class="live-note" aria-live="polite"></span></div></form>`:S.checking?'<button class="btn btn-primary" disabled>正在检查更新…</button>':!S.remote?'<button class="btn btn-primary" id="check-update">检查更新 ↗</button><button class="text-link" id="other-actions">其他更新方式 ↗</button>':hasPending?'<button class="btn btn-primary" id="start-update">开始更新 ↗</button><button class="text-link" id="check-update">重新检查 ↻</button><button class="text-link" id="other-actions">其他更新方式 ↗</button>':'<button class="btn btn-primary" id="check-update">重新检查 ↻</button><button class="text-link" id="other-actions">其他更新方式 ↗</button>'}</div>
  ${pipelineMarkup()}
  ${progress?`<div class="progress-area"><div class="progress-top"><span>${esc(progress.text||'任务进度')}</span><span>${percent===null?'':`${percent.toFixed(1)}% · `}${progress.unit==='bytes'?`${size(progress.completed)} / ${size(progress.total)}`:`${progress.completed??'—'} / ${progress.total??'—'}`}</span></div><div class="progress-track"><span style="width:${percent??0}%"></span></div></div>`:''}${last&&!S.job?`<p class="live-note" style="margin-top:14px">结束时间：${when(last.finished_at)}</p>`:''}</div>`;
  $('#check-update')?.addEventListener('click',refreshServer);$('#start-update')?.addEventListener('click',()=>runJob('update'));$('#cancel-job')?.addEventListener('click',()=>writeAction('/api/cancel',{},'已发送取消请求'));$('#other-actions')?.addEventListener('click',updateOptions);
- const firstRunForm=$('#first-run-actions');if(firstRunForm){const mode=firstRunForm.elements.mode,start=firstRunForm.elements.start,sync=()=>{start.hidden=mode.value!=='from';};mode.onchange=sync;sync();firstRunForm.onsubmit=e=>{e.preventDefault();runJob(mode.value,mode.value==='from'?Number(start.value):undefined);};}
+ const firstRunForm=$('#first-run-actions');if(firstRunForm){
+  const mode=firstRunForm.elements.mode,start=firstRunForm.elements.start,out=$('#first-run-preview-result'),previewButton=$('#first-run-preview');
+  const sync=()=>{start.hidden=mode.value!=='from';};
+  mode.onchange=()=>{sync();out.textContent='';};
+  start.oninput=()=>{out.textContent='';};
+  sync();
+  previewButton.onclick=async()=>{
+   const choice=mode.value;
+   if(choice==='baseline'){out.textContent='仅记录当前版本号，不下载任何资源。';return;}
+   previewButton.disabled=true;out.textContent='正在获取下载范围…';
+   try{
+    let remote=S.remote;if(!remote)remote=await api('/api/server');
+    const from=choice==='latest'?remote.server_revision:choice==='full'?1:Number(start.value)||0;
+    if(from<1)throw new Error('请填写有效的起点版本号。');
+    const p=await api('/api/preview?from='+from);
+    out.textContent=`v${p.start} → v${p.revision} · Asset ${p.bundles} 个 · Resource ${p.files} 个 · 预计下载 ${size(p.bytes)}`;
+   }catch(e){out.textContent='预览失败：'+e.message;}
+   finally{previewButton.disabled=false;}
+  };
+  firstRunForm.onsubmit=e=>{e.preventDefault();runJob(mode.value,mode.value==='from'?Number(start.value):undefined);};
+ }
 }
 async function refreshLocal(){const response=await api('/api/state');S.local=response.local;S.job=response.job.running;S.lastJob=response.job.last;if(S.page==='overview')render();return response;}
 async function refreshServer(){if(S.checking)return;S.checking=true;S.remoteError='';if(S.page==='overview')render();try{S.remote=await api('/api/server');}catch(e){S.remote=null;S.remoteError=e.message;}finally{S.checking=false;if(S.page==='overview')render();}}
