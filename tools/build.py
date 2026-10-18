@@ -71,12 +71,23 @@ def prepare_interpreter(version: str, dest: Path) -> Path:
 def install_dependencies(python_exe: Path, extra: list) -> None:
     get_pip = fetch(GET_PIP_URL, BUILD / "get-pip.py")
     log("引导 pip...")
-    subprocess.run([str(python_exe), str(get_pip), "-q", "--no-warn-script-location"], check=True)
+    # The build can run in a restricted Windows environment where pip's cache
+    # directory is not writable. tempfile then keeps retrying instead of
+    # failing promptly, leaving get-pip spinning at full CPU. The release
+    # build is disposable, so a cache provides no value here anyway.
+    subprocess.run(
+        [
+            str(python_exe), str(get_pip), "-q", "--no-warn-script-location",
+            "--no-cache-dir",
+        ],
+        check=True,
+    )
 
     log("安装依赖（仅 wheel，嵌入式环境无法源码编译）...")
     subprocess.run(
         [
             str(python_exe), "-m", "pip", "install", "-q", "--no-warn-script-location",
+            "--no-cache-dir",
             # Without this, a package preferring an sdist dies on missing setuptools.
             "--only-binary=:all:",
             "-r", str(ROOT / "requirements.txt"), *extra,
