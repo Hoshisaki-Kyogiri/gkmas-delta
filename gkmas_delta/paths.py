@@ -36,6 +36,7 @@ class DataPaths:
         # Converted from Resource by the web console; can be deleted and redone.
         self.audio = data_dir / "AUDIO"
         self.video = data_dir / "VIDEO"
+        self.stories = data_dir / "STORY"
         # Old toolkit layout keeps its diff manifests here; read them too.
         self.legacy_manifests = data_dir / "DecryptedCache"
 

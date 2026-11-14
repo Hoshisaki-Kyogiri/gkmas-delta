@@ -176,6 +176,8 @@ def _story_entry(path: Path) -> dict:
 def list_stories(paths) -> dict:
     resources = paths.resources
 
+    export_stories(paths)
+
     def compute():
         if not resources.is_dir():
             return []
@@ -196,6 +198,10 @@ def list_stories(paths) -> dict:
         revisions = resource_revisions(paths)
         for item in series.values():
             item["parts"].sort(key=lambda p: p["part"])
+            for part in item["parts"]:
+                revision = revisions.get(part["file"], 0)
+                exported = paths.stories / (f"v{revision}" if revision else "版本未知") / part["file"]
+                part["export_path"] = exported.relative_to(paths.data_dir).as_posix() if exported.is_file() else ""
             item["revision"] = max((revisions.get(p["file"], 0) for p in item["parts"]), default=0)
         return sorted(series.values(), key=lambda s: s["mtime"], reverse=True)
 
@@ -251,6 +257,49 @@ def parse_story(path: Path) -> list:
         if owner is not None:
             owner["voices"].append(cue)
     return lines
+
+
+def _plain_story_text(text: str) -> str:
+    text = text.replace("{user}", "P")
+    return re.sub(r"</?[a-z]+(?:\\?=[^>]*?)?>", "", text)
+
+
+def export_stories(paths, revisions=None, filenames=None, exclude=()):
+    """Write readable dialogue while retaining the original scripts in Resource.
+
+    Revision is the saved manifest's end revision, not necessarily the exact
+    revision in which a resource was introduced.
+    """
+    if not paths.resources.is_dir():
+        return 0
+    revisions = resource_revisions(paths) if revisions is None else revisions
+    excluded = set(exclude)
+    files = paths.resources.glob("adv_*.txt") if filenames is None else (
+        paths.resources / name for name in filenames
+        if Path(name).name == name and name.startswith("adv_") and name.endswith(".txt")
+    )
+    written = 0
+    for path in files:
+        if path.name in excluded or not path.is_file():
+            continue
+        paragraphs = []
+        for line in parse_story(path):
+            if line["type"] == "message":
+                name = _plain_story_text(line["name"])
+                paragraphs.append((name + "：" if name else "") + _plain_story_text(line["text"]))
+            elif line["type"] == "narration":
+                paragraphs.append(_plain_story_text(line["text"]))
+            elif line["type"] == "choice":
+                paragraphs.append("\n".join("・" + _plain_story_text(c) for c in line["choices"]))
+        content = "\n\n".join(paragraphs) + ("\n" if paragraphs else "")
+        revision = revisions.get(path.name, 0)
+        target = paths.stories / (f"v{revision}" if revision else "版本未知") / path.name
+        if target.is_file() and target.read_text(encoding="utf-8") == content:
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        written += 1
+    return written
 
 
 def read_story(resources: Path, filename: str) -> list:

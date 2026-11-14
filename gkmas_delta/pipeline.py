@@ -15,7 +15,7 @@ The server does the diffing, so incremental mode needs no local manifest history
 - just the revision number in state.json.
 """
 
-from . import convert, deobfuscate, extract, octo
+from . import convert, deobfuscate, extract, media, octo
 from .downloader import build_jobs, check_disk_space, download
 from .errors import UmeError
 from .state import State
@@ -121,6 +121,8 @@ def run(
         raise UmeError("起点版本号至少是 1。")
     paths = config.paths
     paths.ensure()
+    # Backfill previously downloaded scripts before same-name resources change.
+    media.export_stories(paths)
     state = State.load(paths.state_file)
 
     mode = "full" if local_cache is not None else resolve_mode(config, state, requested_mode, interactive)
@@ -173,6 +175,13 @@ def run(
     check_disk_space(jobs, paths.data_dir)
     _, failed = download(jobs, config.workers)
     check_cancel()
+
+    if config.download_resources:
+        names = [entry.get("name", "") for entry in manifest["resourceList"]]
+        count = media.export_stories(paths, {name: revision for name in names}, names,
+                                     exclude=(name for name, _ in failed))
+        if count:
+            info(f"已导出 {count} 个去参数剧情文件到 {paths.stories / f'v{revision}'}。")
 
     if config.deobfuscate:
         step("解混淆")

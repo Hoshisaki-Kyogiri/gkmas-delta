@@ -316,8 +316,16 @@ def _gallery_dir(config, revision: int, source: str) -> Path:
     return paths.revision_converted(revision) if source == "webp" else paths.revision_images(revision)
 
 
+def _image_origin(relative: str) -> str:
+    """Classify by retained names; old exports do not record bundle origins."""
+    parts = relative.lower().replace("\\", "/").split("/")
+    if any(part.startswith("img_") for part in parts):
+        return "image"
+    return "texture"
+
+
 def _list_images(
-    config, revision: int, source: str, query: str, offset: int, card: str = "", character: str = "", limit: int = 0
+    config, revision: int, source: str, query: str, offset: int, card: str = "", character: str = "", limit: int = 0, origin: str = ""
 ) -> dict:
     if limit not in GALLERY_PAGE_SIZES:
         limit = GALLERY_PAGE_SIZE
@@ -341,6 +349,9 @@ def _list_images(
     for path, relative in files:
         if query and query not in relative.lower():
             continue
+        image_origin = _image_origin(relative)
+        if origin and image_origin != origin:
+            continue
         kind = media.card_kind(path.name)
         if card and kind != card:
             continue
@@ -351,7 +362,7 @@ def _list_images(
             present.add(who)
         if character and who != character:
             continue
-        matched.append((path, relative, kind, who))
+        matched.append((path, relative, kind, who, image_origin))
 
     data_dir = config.paths.data_dir
     items = [
@@ -361,8 +372,9 @@ def _list_images(
             "group": str(Path(relative).parent.as_posix()),
             "card": kind,
             "character": who,
+            "origin": image_origin,
         }
-        for path, relative, kind, who in matched[offset : offset + limit]
+        for path, relative, kind, who, image_origin in matched[offset : offset + limit]
     ]
     return {**empty, "total": len(matched), "items": items, "characters": sorted(present)}
 
@@ -476,6 +488,7 @@ def make_handler(config_path: Path, hub: EventHub, jobs: JobRunner):
                             query.get("card", [""])[0],
                             query.get("character", [""])[0],
                             int(query.get("limit", ["0"])[0]),
+                            query.get("origin", [""])[0],
                         )
                     )
                 elif url.path == "/api/audio":

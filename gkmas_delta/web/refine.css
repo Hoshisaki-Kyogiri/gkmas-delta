@@ -143,7 +143,7 @@
 :root[data-style] #story-play-all{color:var(--accent-text);padding-right:14px}
 :root[data-style] #story-play-all:before{content:"▶";font-size:.7em;margin-right:7px;vertical-align:.12em}
 :root[data-style] #story-play-all:disabled{color:var(--muted)}
-:root[data-style] .live-reader .live-form-actions>label{padding-left:14px;display:inline-flex;align-items:center;gap:6px}
+:root[data-style] .live-reader .live-form-actions>label{padding:0 14px;display:inline-flex;align-items:center;gap:6px}
 :root[data-style] .live-reader .live-form-actions input{accent-color:var(--accent)}
 :root[data-style] .live-reader .live-form-actions{margin-bottom:26px}
 :root[data-style] .live-reader .voice-button{border:0;border-radius:0;background:none;padding:0;margin-top:2px;color:var(--accent-text)}
@@ -228,3 +228,7 @@
   :root[data-style] .stat:first-child .stat-value{font-size:72px}
   :root[data-style] .stat{padding:0 16px}
 }
+
+/* Story file action follows the same text-control style as the reader. */
+:root[data-style] .story-file-link{min-height:0;padding:1px 14px;border:0;border-left:1px solid var(--line);border-radius:0;background:none;color:var(--muted);font-size:14px;line-height:1.3;font-weight:400}
+:root[data-style] .story-file-link:hover{color:var(--ink)}
